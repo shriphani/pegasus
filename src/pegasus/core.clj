@@ -4,8 +4,8 @@
 
 (defn crawl
   "Main crawl method. Use this to spawn a new job"
-  [options]
-  (let [final-options (merge defaults/default-options
-                             options)]
-    final-options))
+  [config]
+  (let [final-config (merge config
+                            defaults/default-options)]
+    (process/initialize-pipeline final-config)))
  

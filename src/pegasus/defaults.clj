@@ -66,11 +66,12 @@
    (pprint obj wrtr)))
 
 (def default-options {:seeds []
-                      :queue-fn nil
+                      :queue    in-memory-queue
+                      :dequeue  dequeue!
                       :frontier default-frontier-fn
                       :extractor default-extractor-fn
                       :writer default-writer-fn
-                      :pipeline [:queue
+                      :pipeline [:dequeue
                                  :frontier
                                  :extractor
                                  :writer
