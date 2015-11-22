@@ -28,6 +28,12 @@
         value
         (recur)))))
 
+(defn get-request
+  [url]
+  (client/get url {:throw-exceptions false
+                   :socket-timeout 1000
+                   :conn-timeout 1000}))
+
 (defn default-frontier-fn
   "The default frontier issues a GET request
   to the URL"
@@ -35,7 +41,7 @@
   (println "Frontier grabbing: " url)
   {:url  url
    :body (-> url
-             client/get
+             get-request
              :body)
    :time (t/now)})
 
@@ -64,15 +70,29 @@
   "A writer writes to a writer or a stream.
   Default write is just a pprint"
   ([obj]
-   (pprint obj))
+                                        ;(pprint obj)
+   (println "writer")
+   (:extracted obj))
   
   ([obj wrtr]
-   (pprint obj wrtr)))
+                                        ;(pprint obj wrtr)
+   (println "writer")
+   (:extracted obj)))
 
 (defn default-enqueue
   [queue item]
-  (println "Enqueueing: " item)
-  (swap! queue conj item))
+  (cond (map? item)
+        (do (println "Enqueueing: " (:extracted item))
+            (recur queue (:extracted item)))
+
+        (coll? item)
+        (do (println "Enqueueing: " item)
+            (doseq [an-item item]
+              (swap! queue conj an-item)))
+
+        :else
+        (do (println "Enqueueing: " item)
+            (swap! queue conj item))))
 
 (defn default-visited-check
   [obj queue visited]
@@ -82,15 +102,15 @@
        (contains? queue
                   (:url obj)))))
 
-(def default-options {:seeds []
-                      :queue (get-in-memory-queue)
-                      :dequeue  dequeue!
-                      :frontier default-frontier-fn
-                      :extractor default-extractor-fn
-                      :writer default-writer-fn
-                      :enqueue default-enqueue
-                      :dequeue-fn identity
-                      :pipeline [:dequeue-fn
-                                 :frontier
-                                 :extractor
-                                 :writer]})
+(def default-options (let [q (get-in-memory-queue)]
+                      {:seeds []
+                       :queue q
+                       :dequeue  dequeue!
+                       :frontier default-frontier-fn
+                       :extractor default-extractor-fn
+                       :writer default-writer-fn
+                       :enqueue #(default-enqueue q %)
+                       :pipeline [:frontier
+                                  :extractor
+                                        ;          :filters
+                                  :writer]}))
