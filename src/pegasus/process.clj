@@ -8,8 +8,12 @@
 
 (defn add-transducer
   [in xf]
-  (let [out (async/chan (async/buffer 1024))]
-    (async/pipeline 5 out xf in)
+  (let [out (async/chan (async/buffer 2048)
+                        identity
+                        (fn [x]
+                          (println x)
+                          nil))]
+    (async/pipeline-blocking 5 out xf in)
     out))
 
 (defn run-process

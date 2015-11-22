@@ -57,13 +57,17 @@
                         (html/select [:a]))
         
         url         (:url obj)
+
+        uris        (map
+                     #(->> %
+                           :attrs
+                           :href)
+                     anchor-tags)
+
+        clean-uris  (filter identity uris)
         
-        extracted   {:extracted (map
-                                 #(->> %
-                                       :attrs
-                                       :href
-                                       (uri/resolve-uri url))
-                                 anchor-tags)}]
+        extracted   {:extracted (map #(uri/resolve-uri url %)
+                                     clean-uris)}]
     (merge obj extracted)))
 
 (defn default-writer-fn
