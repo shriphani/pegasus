@@ -10,7 +10,9 @@
 
 ;; the in-memory queue holds a q
 ;;; in memory
-(def in-memory-queue (atom PersistentQueue/EMPTY))
+(defn get-in-memory-queue
+  []
+  (atom PersistentQueue/EMPTY))
 
 ;; stores are a collection of workers
 ;;; that pull in from a channel and
@@ -30,6 +32,7 @@
   "The default frontier issues a GET request
   to the URL"
   [url]
+  (println "Frontier grabbing: " url)
   {:url  url
    :body (-> url
              client/get
@@ -40,6 +43,7 @@
   "Default extractor extracts URLs from anchor tags in
   a page"
   [obj]
+  (println "Extracting from: " (:url obj))
   (let [anchor-tags (-> obj
                         :body
                         StringReader.
@@ -48,12 +52,12 @@
         
         url         (:url obj)
         
-        extracted   (map
-                     #(->> %
-                           :attrs
-                           :href
-                           (uri/resolve-uri url))
-                     anchor-tags)]
+        extracted   {:extracted (map
+                                 #(->> %
+                                       :attrs
+                                       :href
+                                       (uri/resolve-uri url))
+                                 anchor-tags)}]
     (merge obj extracted)))
 
 (defn default-writer-fn
@@ -65,14 +69,28 @@
   ([obj wrtr]
    (pprint obj wrtr)))
 
+(defn default-enqueue
+  [queue item]
+  (println "Enqueueing: " item)
+  (swap! queue conj item))
+
+(defn default-visited-check
+  [obj queue visited]
+  (not
+   (or (some #{(:url obj)}
+             visited)
+       (contains? queue
+                  (:url obj)))))
+
 (def default-options {:seeds []
-                      :queue    in-memory-queue
+                      :queue (get-in-memory-queue)
                       :dequeue  dequeue!
                       :frontier default-frontier-fn
                       :extractor default-extractor-fn
                       :writer default-writer-fn
-                      :pipeline [:dequeue
+                      :enqueue default-enqueue
+                      :dequeue-fn identity
+                      :pipeline [:dequeue-fn
                                  :frontier
                                  :extractor
-                                 :writer
-                                 :store]})
+                                 :writer]})

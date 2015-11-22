@@ -5,7 +5,8 @@
 (defn crawl
   "Main crawl method. Use this to spawn a new job"
   [config]
-  (let [final-config (merge config
-                            defaults/default-options)]
+  (let [final-config (merge defaults/default-options
+                            config)]
+    (println "Final config:" final-config)
     (process/initialize-pipeline final-config)))
  

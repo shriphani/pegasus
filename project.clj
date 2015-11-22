@@ -8,5 +8,6 @@
                  [enlive "1.1.6"]
                  [org.bovinegenius/exploding-fish "0.3.4"]
                  [org.clojure/clojure "1.6.0"]
-                 [org.clojure/core.async "0.1.346.0-17112a-alpha"]
+                 [org.clojure/core.async "0.2.374"]
+                 [org.clojure/tools.namespace "0.2.11"]
                  [org.mapdb/mapdb "2.0-beta8"]])

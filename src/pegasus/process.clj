@@ -6,28 +6,33 @@
   and writes to an out-channel (not necessarily)"
   (:require [clojure.core.async :as async]))
 
-(defn run-queue-process
-  "The queue process is special
-  Runs first"
-  [queue dequeue! out-chan]
-  (async/go-loop []
-   (let [next-url (dequeue! queue)]
-     (when next-url
-      (async/>! out-chan next-url)))))
+(defn queue->chan
+  ([queue dequeue-fn]
+   (queue->chan queue dequeue-fn (async/chan)))
+
+  ([queue dequeue-fn channel]
+   (async/go-loop []
+     (let [in-val (dequeue-fn queue)]
+       (when in-val
+         (async/>!! channel in-val))
+       (recur)))
+   channel))
 
 (defn run-process
   [process-fn in-chan out-chan]
   (async/go-loop []
-    (let [in-val  (async/<! in-chan)
-          out-val (process-fn val)]
-      (when in-val
-       (async/>! out-chan out-val)))))
+    (let [in-val  (async/<!! in-chan)
+          out-val (process-fn in-val)]
+      (println "Obj: " out-val)
+      (when out-val
+       (async/>!! out-chan out-val)))))
 
 (defn run-write-process
   [process-fn in-chan]
   (async/go-loop []
-    (let [in-val (async/<! in-chan)]
-      (process-fn in-val))))
+    (let [in-val (async/<!! in-chan)]
+      (println "Lol"
+       (process-fn in-val)))))
 
 (defn initialize-data-structures
   "The critical data structures are:
@@ -37,9 +42,11 @@
   Spin up both"
   [config]
   (let [seeds (:seeds config)
-        queue (:queue config)]
+        queue (:queue config)
+
+        enqueue-fn (:enqueue config)]
     (doseq [seed seeds]
-      (swap! queue conj seed))))
+      (enqueue-fn queue seed))))
 
 (defn initialize-pipeline
   "A pipeline contains kws - fn-map
@@ -52,29 +59,21 @@
   [config]
   (println (:pipeline config))
   (initialize-data-structures config)
-  (let [pipeline (:pipeline config)]
-    (reduce
-     (fn [channel [i component]]
-       (cond (zero? i)
-             (if (= component :dequeue)
-               (let [out-chan (async/chan)]
-                 (run-queue-process (:queue config)
-                                    (:dequeue config)
-                                    out-chan))
-               (throw
-                (Exception. "The first component must be the queue")))
+  (let [pipeline (:pipeline config)
 
-             (= i (- (count pipeline) 1)) ;; pathetic.
-             (let [in-chan  (async/chan)
-                   component-fn (get pipeline component)]
-               (run-write-process component-fn in-chan))
-             
-             :else
-             (let [in-chan (async/chan)
-                   out-chan (async/chan)
-                   component-fn (get pipeline component)]
-               (run-process component-fn
-                            in-chan
-                            out-chan))))
-     nil
-     (map-indexed vector pipeline))))
+        dequeue-fn (:dequeue config)
+        queue      (:queue config)
+        
+        queue-in-chan (queue->chan queue dequeue-fn)]
+
+    (reduce
+     (fn [last-out-channel component]
+       (println :current-component component)
+       (let [component-fn (get config component)]
+         (let [out-chan (async/chan)]
+           (run-process component-fn
+                        last-out-channel
+                        out-chan)
+           out-chan)))
+     queue-in-chan
+     pipeline)))
