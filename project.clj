@@ -6,6 +6,7 @@
   :dependencies [[clj-http "2.0.0"]
                  [clj-time "0.11.0"]
                  [enlive "1.1.6"]
+                 [jarohen/chime "0.1.7"]
                  [org.bovinegenius/exploding-fish "0.3.4"]
                  [org.clojure/clojure "1.7.0"]
                  [org.clojure/core.async "0.2.374"]
