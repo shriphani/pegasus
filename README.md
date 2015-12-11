@@ -6,6 +6,8 @@ Parallelism is done with core.async.
 
 Data structures are backed to disk with MapDB.
 
+Warning: WIP.
+
 ## Usage
 
 FIXME
