@@ -14,28 +14,34 @@
 
         [init-chan final-out-chan] (process/initialize-pipeline final-config)]
     ;; feed seeds
-    (async/go []
+    (async/go
       (doseq [seed (:seeds final-config)]
-        (async/>! init-chan seed)))
+        (let [initial-obj {:input seed :config final-config}]
+          (async/>! init-chan initial-obj))))
 
     (println "Crawling begins")
+
+    (async/go-loop []
+      (let [items (async/<! final-out-chan)]
+        (println items)))
     
     ;; 
-    (async/go-loop []
-      (let [items (async/<! final-out-chan)
-            host-wise (group-by uri/host items)]
+    ;; (async/go-loop []
+    ;;   (let [items (async/<! final-out-chan)
+    ;;         host-wise (group-by uri/host items)]
 
-        (doseq [[host host-uris] host-wise]
-          (let [chimes (chime-ch
-                        (take (count host-uris)
-                              (map
-                               (fn [sec]
-                                 (-> sec t/seconds t/from-now))
-                               (iterate #(+ 5 %) 0))))]
-            (async/go-loop [urls host-uris]
-              (when (-> urls empty? not)
-                (when-let [time (async/<! chimes)]
-                  (async/>! init-chan (first urls))
-                  (recur (rest urls))))))))
-      (recur))))
+    ;;     (doseq [[host host-uris] host-wise]
+    ;;       (let [chimes (chime-ch
+    ;;                     (take (count host-uris)
+    ;;                           (map
+    ;;                            (fn [sec]
+    ;;                              (-> sec t/seconds t/from-now))
+    ;;                            (iterate #(+ 5 %) 0))))]
+    ;;         (async/go-loop [urls host-uris]
+    ;;           (when (-> urls empty? not)
+    ;;             (when-let [time (async/<! chimes)]
+    ;;               (async/>! init-chan (first urls))
+    ;;               (recur (rest urls))))))))
+    ;;   (recur))
+))
 

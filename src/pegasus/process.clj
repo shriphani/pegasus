@@ -18,10 +18,11 @@
 
 (defn run-process
   [process-fn in-chan]
-  (add-transducer in-chan (map #(try (process-fn %)
+  (add-transducer in-chan (map #(try (merge %
+                                            {:input (process-fn (:input %))})
                                      (catch Exception e
                                        (do (println "Fuck up")
-                                           {}))))))
+                                           (merge % {:input nil})))))))
 
 (defn initialize-pipeline
   "A pipeline contains kws - fn-map
