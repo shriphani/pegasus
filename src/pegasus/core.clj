@@ -31,7 +31,7 @@
 
     (println "Crawling begins")
     
-    ;; stuff
+    ;; crawl-loop
     (async/go-loop []
       (let [urls-to-process (:input (async/<! final-out-chan))
             host-wise       (group-by uri/host
