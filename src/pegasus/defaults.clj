@@ -117,4 +117,6 @@
                        :pipeline [:frontier
                                   :extractor
                                         ;          :filters
-                                  :writer]}))
+                                  :writer]
+                       :host-last-ping-times (atom {})
+                       :min-delay 2}))
