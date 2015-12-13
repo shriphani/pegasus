@@ -60,10 +60,25 @@
     
     ;; crawl-loop
     (async/go-loop []
-      (let [urls-to-process (:input (async/<! final-out-chan))
-            host-wise       (group-by uri/host
-                                      urls-to-process)]
+      (let [emitted         (async/<! final-out-chan)
 
+            emitted-config  (:config emitted)
+            urls-to-process (:input emitted)
+
+            distinct-urls   (distinct urls-to-process)
+
+            unvisited-urls  (filter
+                             (fn [x]
+                               (->> x
+                                    (bloom/contains? @(:visited-bloom emitted-config))
+                                    not))
+                             distinct-urls)
+            
+            host-wise       (group-by uri/host
+                                      unvisited-urls)]
+
+        (println unvisited-urls)
+        
         (doseq [[host host-uris] host-wise]
           
           (let [times     (get-time-ticks (count host-uris)
