@@ -1,6 +1,7 @@
 (ns pegasus.defaults
   "Contains default components"
-  (:require [clj-http.client :as client]
+  (:require [bigml.sketchy.bloom :as bloom]
+            [clj-http.client :as client]
             [clj-time.core :as t]
             [clojure.pprint :refer [pprint]]
             [net.cgrand.enlive-html :as html]
@@ -106,6 +107,10 @@
        (contains? queue
                   (:url obj)))))
 
+(defn default-bloom-update-fn
+  [bloom-filter url]
+  (bloom/insert bloom-filter url))
+
 (def default-options (let [q (get-in-memory-queue)]
                       {:seeds []
                        :queue q
@@ -115,8 +120,13 @@
                        :writer default-writer-fn
                        :enqueue #(default-enqueue q %)
                        :pipeline [:frontier
+                                  :bloom-update
                                   :extractor
                                         ;          :filters
                                   :writer]
                        :host-last-ping-times (atom {})
-                       :min-delay 2}))
+                       :min-delay 2
+                       ;:crawled-bloom-filter
+                       :estimated-crawl-size 1000000
+                       :false-positive-probability 0.01
+                       :visited-bloom nil}))

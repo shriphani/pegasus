@@ -1,5 +1,6 @@
 (ns pegasus.core
-  (:require [chime :refer [chime-ch]]
+  (:require [bigml.sketchy.bloom :as bloom]
+            [chime :refer [chime-ch]]
             [clj-time.core :as t]
             [clojure.core.async :as async]
             [org.bovinegenius.exploding-fish :as uri]
@@ -28,10 +29,25 @@
 (defn crawl
   "Main crawl method. Use this to spawn a new job"
   [config]
-  (let [final-config (merge defaults/default-options
-                            config)
+  (let [config*      (merge defaults/default-options config)
+        bloom-filter (bloom/create (:estimated-crawl-size config*)
+                                   (:false-positive-probability config*))
 
+        with-bloom-config (merge (merge defaults/default-options
+                                        config)
+                                 {:visited-bloom (atom bloom-filter)})
+
+        bloom-update-fn (fn [obj]
+                          (do (swap! (:visited-bloom with-bloom-config)
+                                     (fn [x]
+                                       (defaults/default-bloom-update-fn x (:url obj))))
+                              obj))
+
+        final-config    (merge with-bloom-config
+                               {:bloom-update bloom-update-fn})
+        
         [init-chan final-out-chan] (process/initialize-pipeline final-config)]
+
     ;; feed seeds
     (async/go
       (doseq [seed (:seeds final-config)]
@@ -39,6 +55,8 @@
           (async/>! init-chan initial-obj))))
 
     (println "Crawling begins")
+
+    ;; initialize bloom filters
     
     ;; crawl-loop
     (async/go-loop []

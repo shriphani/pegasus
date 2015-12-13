@@ -3,7 +3,8 @@
   :url "http://github.com/shriphani/pegasus"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[clj-http "2.0.0"]
+  :dependencies [[bigml/sketchy "0.3.1"]
+                 [clj-http "2.0.0"]
                  [clj-time "0.11.0"]
                  [enlive "1.1.6"]
                  [jarohen/chime "0.1.7"]
