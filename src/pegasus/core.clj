@@ -16,6 +16,15 @@
         [old new]  ; return value
         (recur)))))
 
+(defn get-time-ticks
+  "Generates a set of intervals
+  (jodatime objects) separated by min-delay"
+  [n min-delay]
+  (take n
+        (map
+         t/seconds
+         (iterate #(+ min-delay %) min-delay))))
+
 (defn crawl
   "Main crawl method. Use this to spawn a new job"
   [config]
@@ -39,14 +48,9 @@
 
         (doseq [[host host-uris] host-wise]
           
-          (let [times     (take
-                           (count host-uris)
-                           (map
-                            (fn [a-time]
-                              (t/seconds a-time))
-                            (iterate #(+ (:min-delay final-config) %)
-                                     (:min-delay final-config))))
-
+          (let [times     (get-time-ticks (count host-uris)
+                                          (:min-delay final-config))
+                
                 [old new] (alternate-swap! (:host-last-ping-times final-config)
                                            (fn [x]
                                              (if (and (get x host)
