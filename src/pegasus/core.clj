@@ -3,6 +3,8 @@
             [chime :refer [chime-ch]]
             [clj-time.core :as t]
             [clojure.core.async :as async]
+            [clojure.java.io :as io]
+            [me.raynes.es.fs :as fs]
             [org.bovinegenius.exploding-fish :as uri]
             [pegasus.defaults :as defaults]
             [pegasus.process :as process]))
@@ -30,41 +32,31 @@
   [uris-grouped-by-host]
   ())
 
+(defn setup-jobdir
+  "Creates subdirs for data structures, logs etc."
+  [job-dir logs-dir struct-dir]
+  (let [logs-dir-file (io/file job-dir logs-dir)
+        struct-dir-file (io/file job-dir struct-dir)]
+
+    (when-not (.exists logs-dir-file)
+      (fs/mkdir (.getPath logs-dir-file)))
+
+    (when-not (.exists struct-dir-file)
+      (fs/mkdir (.getPath struct-dir-file)))))
+
 (defn crawl
   "Main crawl method. Use this to spawn a new job"
   [config]
-  (let [config*      (merge defaults/default-options config)
-        
+  (let [final-config (merge defaults/default-options config)
         [init-chan final-out-chan] (process/initialize-pipeline final-config)]
 
-    ;; feed seeds
-    (async/go
-      (doseq [seed (:seeds final-config)]
-        (let [initial-obj {:input seed :config final-config}]
-          (async/>! init-chan initial-obj))))
+    ;; job directories
+    (setup-jobdir (:job-dir config)
+                  (:logs-dir config)
+                  (:struct-dir config))
+    
 
-    (println "Crawling begins")
 
-    ;; crawl-loop
-    (async/go-loop []
-      (let [emitted         (async/<! final-out-chan)
-
-            emitted-config  (:config emitted)
-            urls-to-process (:input emitted)
-
-            distinct-urls   (distinct urls-to-process)
-
-            unvisited-urls  (filter
-                             (fn [x]
-                               (->> x
-                                    (bloom/contains? @(:visited-bloom emitted-config))
-                                    not))
-                             distinct-urls)
-            
-            host-wise       (group-by uri/host
-                                      unvisited-urls)]
-
-        (insert-uris host-wise)
-        )
-      (recur))))
+    ;; set up data-structures
+    )
 
