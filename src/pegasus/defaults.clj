@@ -118,6 +118,7 @@
                        :frontier default-frontier-fn
                        :extractor default-extractor-fn
                        :writer default-writer-fn
+                       :job-dir "/tmp" ; by-default data-structures sit in /tmp. Do change this :)
                        :enqueue #(default-enqueue q %)
                        :pipeline [:frontier
                                   :bloom-update
