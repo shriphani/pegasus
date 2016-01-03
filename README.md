@@ -1,12 +1,10 @@
 # pegasus
 
-A high-performance, multithreaded, crawler.
+Pegasus is a high-performance, multithreaded, crawler.
 
-Parallelism is done with core.async.
+Parallelism is achieved using `core.async`.
 
-Data structures are backed to disk with MapDB.
-
-Warning: WIP.
+You can use simple functions to modify your crawler.
 
 ## Usage
 
@@ -18,7 +16,7 @@ FIXME
 
 ## License
 
-Copyright © 2015 Shriphani Palakodety
+Copyright © 2015-2016 Shriphani Palakodety
 
 Distributed under the Eclipse Public License either version 1.0 or (at
 your option) any later version.
