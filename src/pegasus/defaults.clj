@@ -31,6 +31,7 @@
 
 (defn get-request
   [url]
+  (println :getting url)
   (client/get url {:throw-exceptions false
                    :socket-timeout 1000
                    :conn-timeout 1000}))
@@ -39,7 +40,6 @@
   "The default frontier issues a GET request
   to the URL"
   [url]
-  (println "Frontier grabbing: " url)
   {:url  url
    :body (-> url
              get-request
@@ -50,10 +50,9 @@
   "Default extractor extracts URLs from anchor tags in
   a page"
   [obj]
-  (println "Extracting from: " (:url obj))
   (let [anchor-tags (-> obj
                         :body
-                        StringReader.
+                        (StringReader.)
                         html/html-resource
                         (html/select [:a]))
         
@@ -86,18 +85,7 @@
 
 (defn default-enqueue
   [queue item]
-  (cond (map? item)
-        (do (println "Enqueueing: " (:extracted item))
-            (recur queue (:extracted item)))
-
-        (coll? item)
-        (do (println "Enqueueing: " item)
-            (doseq [an-item item]
-              (swap! queue conj an-item)))
-
-        :else
-        (do (println "Enqueueing: " item)
-            (swap! queue conj item))))
+  (println :woohoo))
 
 (defn default-visited-check
   [obj queue visited]
@@ -112,7 +100,7 @@
   (bloom/insert bloom-filter url))
 
 (def default-options (let [q (get-in-memory-queue)]
-                      {:seeds []
+                      {:seed nil
                        :queue q
                        :dequeue  dequeue!
                        :frontier default-frontier-fn
@@ -123,9 +111,8 @@
                        :logs-dir "logs"
                        :enqueue #(default-enqueue q %)
                        :pipeline [:frontier
-                                  :bloom-update
                                   :extractor
-                                        ;          :filters
+                                  :enqueue
                                   :writer]
                        :host-last-ping-times (atom {})
                        :min-delay 2

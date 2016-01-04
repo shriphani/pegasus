@@ -4,7 +4,8 @@
   A routine transforms a record or a map.
   A process reads from an in-channel (not necessarily)
   and writes to an out-channel (not necessarily)"
-  (:require [clojure.core.async :as async]))
+  (:require [clojure.core.async :as async]
+            [clojure.repl :refer [pst]]))
 
 (defn add-transducer
   [in xf]
@@ -18,11 +19,13 @@
 
 (defn run-process
   [process-fn in-chan]
-  (add-transducer in-chan (map #(try (merge %
-                                            {:input (process-fn (:input %))})
-                                     (catch Exception e
-                                       (do (println "Fuck up")
-                                           (merge % {:input nil})))))))
+  (add-transducer in-chan
+                  (map #(try
+                          (merge %
+                                 {:input (process-fn (:input %))})
+                          (catch Exception e
+                            (do (pst e)
+                                (merge % {:input nil})))))))
 
 (defn initialize-pipeline
   "A pipeline contains kws - fn-map

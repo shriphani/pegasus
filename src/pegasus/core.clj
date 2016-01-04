@@ -4,7 +4,7 @@
             [clj-time.core :as t]
             [clojure.core.async :as async]
             [clojure.java.io :as io]
-            [me.raynes.es.fs :as fs]
+            [me.raynes.fs :as fs]
             [org.bovinegenius.exploding-fish :as uri]
             [pegasus.defaults :as defaults]
             [pegasus.process :as process]))
@@ -44,19 +44,35 @@
     (when-not (.exists struct-dir-file)
       (fs/mkdir (.getPath struct-dir-file)))))
 
-(defn crawl
-  "Main crawl method. Use this to spawn a new job"
-  [config]
-  (let [final-config (merge defaults/default-options config)
-        [init-chan final-out-chan] (process/initialize-pipeline final-config)]
+(defn setup-data-structures
+  "Sets up ehcache."
+  [])
 
-    ;; job directories
-    (setup-jobdir (:job-dir config)
-                  (:logs-dir config)
-                  (:struct-dir config))
+(defn setup-loop
+  [init-chan final-chan]
+  (let [retrieved (async/go
+                   (async/<! final-chan))]
+    (println :retrieved retrieved)))
+
+(defn crawl-loop
+  "Sets up a crawl-job's loop"
+  [config]
+  (let [final-config (merge defaults/default-options config)]
+
+    (setup-jobdir (:job-dir final-config)
+                  (:logs-dir final-config)
+                  (:struct-dir final-config))
     
 
+    (setup-data-structures)
 
-    ;; set up data-structures
-    )
+    (let [[init-chan final-chan]
+          (process/initialize-pipeline final-config)]
+
+      (setup-loop init-chan final-chan)
+
+      ;; all systems are a go!
+      (async/go
+       (async/>! init-chan {:input  (:seed final-config)
+                            :config final-config})))))
 
