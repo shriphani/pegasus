@@ -32,17 +32,21 @@
   [uris-grouped-by-host]
   ())
 
+(defn mkdir-if-not-exists
+  [file]
+  (when-not (.exists file)
+    (fs/mkdir (.getPath file))))
+
 (defn setup-jobdir
-  "Creates subdirs for data structures, logs etc."
-  [job-dir logs-dir struct-dir]
+  "Creates subdirs for data structures, logs, corpora etc."
+  [job-dir logs-dir struct-dir corpus-dir]
   (let [logs-dir-file (io/file job-dir logs-dir)
-        struct-dir-file (io/file job-dir struct-dir)]
+        struct-dir-file (io/file job-dir struct-dir)
+        corpus-dir-file (io/file job-dir corpus-dir)]
 
-    (when-not (.exists logs-dir-file)
-      (fs/mkdir (.getPath logs-dir-file)))
-
-    (when-not (.exists struct-dir-file)
-      (fs/mkdir (.getPath struct-dir-file)))))
+    (mkdir-if-not-exists logs-dir-file)
+    (mkdir-if-not-exists struct-dir-file)
+    (mkdir-if-not-exists corpus-dir-file)))
 
 (defn setup-data-structures
   "Sets up ehcache."
@@ -61,9 +65,9 @@
 
     (setup-jobdir (:job-dir final-config)
                   (:logs-dir final-config)
-                  (:struct-dir final-config))
+                  (:struct-dir final-config)
+                  (:corpus-dir final-config))
     
-
     (setup-data-structures)
 
     (let [[init-chan final-chan]
