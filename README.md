@@ -1,6 +1,6 @@
 # pegasus
 
-<img src="pegasus_log.png" />
+<img src="pegasus_logo.png" />
 
 Pegasus is a high-performance, multithreaded, crawler.
 
