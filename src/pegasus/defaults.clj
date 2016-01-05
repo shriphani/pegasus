@@ -85,7 +85,9 @@
 
 (defn default-enqueue
   [queue item]
-  (println :woohoo))
+  (println :woohoo)
+  (println item)
+  item)
 
 (defn default-visited-check
   [obj queue visited]
@@ -99,24 +101,26 @@
   [bloom-filter url]
   (bloom/insert bloom-filter url))
 
-(def default-options (let [q (get-in-memory-queue)]
-                      {:seed nil
-                       :queue q
-                       :dequeue  dequeue!
-                       :frontier default-frontier-fn
-                       :extractor default-extractor-fn
-                       :writer default-writer-fn
-                       :job-dir "/tmp" ; by-default data-structures sit in /tmp. Do change this :)
-                       :struct-dir "data-structures"
-                       :logs-dir "logs"
-                       :enqueue #(default-enqueue q %)
-                       :pipeline [:frontier
-                                  :extractor
-                                  :enqueue
-                                  :writer]
-                       :host-last-ping-times (atom {})
-                       :min-delay 2
-                       ;:crawled-bloom-filter
-                       :estimated-crawl-size 1000000
-                       :false-positive-probability 0.01
-                       :visited-bloom nil}))
+(def default-options {:seed nil
+                      :queue q
+                      :dequeue  dequeue!
+                      :frontier default-frontier-fn
+                      :extractor default-extractor-fn
+                      :writer default-writer-fn
+                      :job-dir "/tmp" ; by-default data-structures sit in /tmp. Do change this :)
+                      :struct-dir "data-structures"
+                      :logs-dir "logs"
+                      :corpus-dir "corpus"
+                      :enqueue #(default-enqueue q %)
+                      :pipeline [:frontier
+                                 :update-cache ; defined during the cache init phase
+                                 :extractor
+                                 :enqueue
+                                 :writer]
+                      :host-last-ping-times (atom {})
+                      :min-delay 2
+                                        ;:crawled-bloom-filter
+                      :estimated-crawl-size 1000000
+                      :false-positive-probability 0.01
+                      :visited-cache-name "visited-cache"
+                      :to-visit-cache-name "to-visit-cache"})

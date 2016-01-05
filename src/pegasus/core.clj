@@ -6,6 +6,7 @@
             [clojure.java.io :as io]
             [me.raynes.fs :as fs]
             [org.bovinegenius.exploding-fish :as uri]
+            [pegasus.cache :as cache]
             [pegasus.defaults :as defaults]
             [pegasus.process :as process]))
 
@@ -28,10 +29,6 @@
          t/seconds
          (iterate #(+ min-delay %) min-delay))))
 
-(defn insert-uris
-  [uris-grouped-by-host]
-  ())
-
 (defn mkdir-if-not-exists
   [file]
   (when-not (.exists file)
@@ -48,30 +45,34 @@
     (mkdir-if-not-exists struct-dir-file)
     (mkdir-if-not-exists corpus-dir-file)))
 
-(defn setup-data-structures
+(defn setup-caches
   "Sets up ehcache."
-  [])
+  [config]
+  (cache/initialize-caches config))
 
 (defn setup-loop
   [init-chan final-chan]
-  (let [retrieved (async/go
-                   (async/<! final-chan))]
-    (println :retrieved retrieved)))
+  )
 
 (defn crawl-loop
   "Sets up a crawl-job's loop"
   [config]
-  (let [final-config (merge defaults/default-options config)]
+  (let [user-config (merge defaults/default-options config)
+        
+        with-cache-config (merge user-config
+                                 (initialize-caches user-config))]
 
-    (setup-jobdir (:job-dir final-config)
-                  (:logs-dir final-config)
-                  (:struct-dir final-config)
-                  (:corpus-dir final-config))
-    
-    (setup-data-structures)
+    (setup-jobdir (:job-dir with-cache-config)
+                  (:logs-dir with-cache-config)
+                  (:struct-dir with-cache-config)
+                  (:corpus-dir with-cache-config))
 
     (let [[init-chan final-chan]
-          (process/initialize-pipeline final-config)]
+          (process/initialize-pipeline with-cache-config)
+
+          final-config (merge with-cache-config
+                              {:init-chan init-chan
+                               :final-chan final-chan})]
 
       (setup-loop init-chan final-chan)
 
