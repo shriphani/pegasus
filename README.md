@@ -1,5 +1,7 @@
 # pegasus
 
+<img src="pegasus_log.png" />
+
 Pegasus is a high-performance, multithreaded, crawler.
 
 Parallelism is achieved using `core.async`.
