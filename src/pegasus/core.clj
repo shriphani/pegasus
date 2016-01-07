@@ -50,17 +50,13 @@
   [config]
   (cache/initialize-caches config))
 
-(defn setup-loop
-  [init-chan final-chan]
-  )
-
 (defn crawl-loop
   "Sets up a crawl-job's loop"
   [config]
   (let [user-config (merge defaults/default-options config)
         
         with-cache-config (merge user-config
-                                 (initialize-caches user-config))]
+                                 (setup-caches user-config))]
 
     (setup-jobdir (:job-dir with-cache-config)
                   (:logs-dir with-cache-config)
@@ -74,7 +70,7 @@
                               {:init-chan init-chan
                                :final-chan final-chan})]
 
-      (setup-loop init-chan final-chan)
+      ;(setup-loop init-chan final-chan)
 
       ;; all systems are a go!
       (async/go

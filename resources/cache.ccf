@@ -14,11 +14,13 @@ jcs.region.visited.cacheattributes.ShrinkerInterval=60
 jcs.region.visited.cacheattributes.MaxSpoolPerRun=500
 jcs.region.visited.elementattributes=org.apache.commons.jcs.engine.ElementAttributes
 jcs.region.visited.elementattributes.IsEternal=true
+jcs.region.visited.cacheattributes.DiskUsagePatternName=UPDATE
 
 jcs.region.tovisit=DC
 jcs.region.tovisit.cacheattributes=org.apache.commons.jcs.engine.CompositeCacheAttributes
 jcs.region.tovisit.cacheattributes.MaxObjects=1000
 jcs.region.tovisit.cacheattributes.MemoryCacheName=org.apache.commons.jcs.engine.memory.lru.LRUMemoryCache
+jcs.region.tovisit.cacheattributes.DiskUsagePatternName=UPDATE
 jcs.region.tovisit.cacheattributes.UseMemoryShrinker=true
 jcs.region.tovisit.cacheattributes.MaxMemoryIdleTime=3600
 jcs.region.tovisit.cacheattributes.ShrinkerInterval=60
