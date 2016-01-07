@@ -1,46 +1,49 @@
 (ns pegasus.cache
-  "Clojure wrapper around Ehcache"
-  (:import [net.sf.ehcache Cache CacheManager Element]))
+  "Clojure wrapper around JCS"
+  (:require [clojure.java.io :as io]
+            [clojure.string :as string])
+  (:import [org.apache.commons.jcs JCS]
+           [org.apache.commons.jcs.engine.control CompositeCacheManager]
+           [java.io ByteArrayInputStream]
+           [java.nio.charset StandardCharsets]
+           [java.util Properties]))
 
-(defn make-cache
-  [cache-name]
-  (Cache. cache-name
-          0 ; no limit
-          true
-          true
-          0
-          0
-          true
-          200))
-
-(defn insert-into-cache
-  [url cache]
-  (let [element (Element. url url)]
-    (.put cache element)))
+(def props (Properties.))
+(def orig-config (-> "cache.ccf"
+                     io/resource
+                     slurp))
 
 (defn remove-from-cache
-  [url cache]
-  (.remove cache url))
+  [item cache]
+  (.remove cache item))
 
+(defn add-to-cache
+  [item cache]
+  (.put cache item "1"))
 
 (defn initialize-caches
   [config]
-  (let [cache-mgr (.newInstance CacheManager)
+  (let [updated-config (string/replace orig-config #"PATH" (:struct-dir config))
+        visited-cache (JCS/getInstance "visited")
+        to-visit-cache (JCS/getInstance "tovisit")
 
-        visited-cache (-> config
-                          :visited-cache-name
-                          make-cache)
-        to-visit-cache (-> config
-                           :to-visit-cache-name
-                           make-cache)]
-    {:cache-manager cache-mgr
+        config-stream (ByteArrayInputStream.
+                       (.getBytes updated-config StandardCharsets/UTF_8))]
+
+;    (.setDiskPath visited-attrs (:struct-dir config))
+;    (.setDiskPath to-visit-attrs (:struct-dir config))
+    (.load props config-stream)
+    (.configure (CompositeCacheManager/getUnconfiguredInstance)
+                props)
+    {:to-visit-cache to-visit-cache
      :visited-cache visited-cache
-     :to-visit-cache to-visit-cache
      :update-cache (fn [obj]
                      (-> obj
                          :url
                          (remove-from-cache to-visit-cache))
+
                      (-> obj
                          :url
-                         (insert-into-cache visited-cache))
+                         (add-to-cache visited-cache))
+
                      obj)}))

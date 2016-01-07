@@ -9,7 +9,7 @@
                  [enlive "1.1.6"]
                  [jarohen/chime "0.1.7"]
                  [me.raynes/fs "1.4.6"]
-                 [net.sf.ehcache/ehcache "2.10.1"]
+                 [org.apache.commons/commons-jcs-core "2.0-beta-1"]
                  [org.bovinegenius/exploding-fish "0.3.4"]
                  [org.clojure/clojure "1.7.0"]
                  [org.clojure/core.async "0.2.374"]

@@ -102,8 +102,6 @@
   (bloom/insert bloom-filter url))
 
 (def default-options {:seed nil
-                      :queue q
-                      :dequeue  dequeue!
                       :frontier default-frontier-fn
                       :extractor default-extractor-fn
                       :writer default-writer-fn
@@ -111,11 +109,9 @@
                       :struct-dir "data-structures"
                       :logs-dir "logs"
                       :corpus-dir "corpus"
-                      :enqueue #(default-enqueue q %)
                       :pipeline [:frontier
                                  :update-cache ; defined during the cache init phase
                                  :extractor
-                                 :enqueue
                                  :writer]
                       :host-last-ping-times (atom {})
                       :min-delay 2
