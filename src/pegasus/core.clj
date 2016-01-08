@@ -4,6 +4,7 @@
             [clj-time.core :as t]
             [clojure.core.async :as async]
             [clojure.java.io :as io]
+            [durable-queue :refer :all]
             [me.raynes.fs :as fs]
             [org.bovinegenius.exploding-fish :as uri]
             [pegasus.cache :as cache]
@@ -50,6 +51,33 @@
   [config]
   (cache/initialize-caches config))
 
+(defn setup-enqueue-loop
+  "Feed in extracted URIs."
+  [init-chan final-chan config]
+  (let [q (queues (:struct-dir config)
+                  {})]
+   (async/go-loop []
+     (let [uris (-> final-chan
+                    async/<!
+                    :input)
+           uris-by-host (group-by uri/host uris)]
+       (doseq [host uris]
+         (let [queue-name (keyword host)]
+           (doseq [to-visit-uri uris]
+             (put! q queue-name to-visit-uri))
+
+           (when-not (.get (:hosts-visited-cache config) host)
+             (.put (:hosts-visited-cache config) host "1") ; mark host as visited
+             (async/go-loop []
+               (async/<! (async/timeout 10000))     ; delay. FIXME: must come from config
+               (let [next-uri-task (take! q queue-name)]
+                 (println next-uri-task)
+                 (async/>! init-chan {:input (deref next-uri-task)})
+                 (deref next-uri-task))
+               (recur)))))
+       ;(recur)
+       ))))
+
 (defn crawl-loop
   "Sets up a crawl-job's loop"
   [config]
@@ -70,7 +98,7 @@
                               {:init-chan init-chan
                                :final-chan final-chan})]
 
-      ;(setup-loop init-chan final-chan)
+      (setup-enqueue-loop init-chan final-chan final-config)
 
       ;; all systems are a go!
       (async/go

@@ -9,26 +9,6 @@
   (:import [clojure.lang PersistentQueue]
            [java.io StringReader]))
 
-;; the in-memory queue holds a q
-;;; in memory
-(defn get-in-memory-queue
-  []
-  (atom PersistentQueue/EMPTY))
-
-;; stores are a collection of workers
-;;; that pull in from a channel and
-;;; work out of a channel
-
-(defn dequeue!
-  [queue]
-  (loop []
-    (let [q     @queue
-          value (peek q)
-          nq    (pop q)]
-      (if (compare-and-set! queue q nq)
-        value
-        (recur)))))
-
 (defn get-request
   [url]
   (println :getting url)
@@ -74,20 +54,12 @@
   "A writer writes to a writer or a stream.
   Default write is just a pprint"
   ([obj]
-                                        ;(pprint obj)
    (println "writer")
    (:extracted obj))
   
   ([obj wrtr]
-                                        ;(pprint obj wrtr)
    (println "writer")
    (:extracted obj)))
-
-(defn default-enqueue
-  [queue item]
-  (println :woohoo)
-  (println item)
-  item)
 
 (defn default-visited-check
   [obj queue visited]
@@ -119,4 +91,5 @@
                       :estimated-crawl-size 1000000
                       :false-positive-probability 0.01
                       :visited-cache-name "visited-cache"
-                      :to-visit-cache-name "to-visit-cache"})
+                      :to-visit-cache-name "to-visit-cache"
+                      :last-visited-time (atom {})})
