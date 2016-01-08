@@ -7,6 +7,7 @@
                  [clj-http "2.0.0"]
                  [clj-time "0.11.0"]
                  [enlive "1.1.6"]
+                 [factual/durable-queue "0.1.5"]
                  [jarohen/chime "0.1.7"]
                  [me.raynes/fs "1.4.6"]
                  [org.apache.commons/commons-jcs-core "2.0-beta-1"]

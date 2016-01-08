@@ -28,6 +28,12 @@ jcs.region.tovisit.cacheattributes.MaxSpoolPerRun=500
 jcs.region.tovisit.elementattributes=org.apache.commons.jcs.engine.ElementAttributes
 jcs.region.tovisit.elementattributes.IsEternal=true
 
+jcs.region.hostsvisited=
+jcs.region.hostsvisited.cacheattributes=org.apache.commons.jcs.engine.CompositeCacheAttributes
+jcs.region.hostsvisited.cacheattributes.MemoryCacheName=org.apache.commons.jcs.engine.memory.lru.LRUMemoryCache
+jcs.region.hostsvisited.elementattributes=org.apache.commons.jcs.engine.ElementAttributes
+jcs.region.hostsvisited.elementattributes.IsEternal=true
+
 
 jcs.auxiliary.DC=org.apache.commons.jcs.auxiliary.disk.indexed.IndexedDiskCacheFactory
 jcs.auxiliary.DC.attributes=org.apache.commons.jcs.auxiliary.disk.indexed.IndexedDiskCacheAttributes

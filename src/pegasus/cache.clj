@@ -35,9 +35,11 @@
                 props)
 
     (let [visited-cache (JCS/getInstance "visited")
-          to-visit-cache (JCS/getInstance "tovisit")]
+          to-visit-cache (JCS/getInstance "tovisit")
+          hosts-visited-cache (JCS/getInstance "hostsvisited")]
       {:to-visit-cache to-visit-cache
        :visited-cache visited-cache
+       :hosts-visited-cache hosts-visited-cache
        :update-cache (fn [obj]
                        (-> obj
                            :url
