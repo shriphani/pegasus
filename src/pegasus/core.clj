@@ -51,6 +51,25 @@
   [config]
   (cache/initialize-caches config))
 
+(defn remove-fragments
+  [a-uri]
+  (uri/fragment a-uri nil))
+
+(defn filter-uris
+  "Given a list of URIs pick out an unseen distinct set.
+  This is a helper for the enqueue op."
+  [uris config]
+  (let [to-visit-cache (:to-visit-cache config)
+        visited-cache (:visited-cache config)
+
+        no-fragments (map remove-fragments uris)
+        unseen (filter
+                (fn [a-uri]
+                  (and (nil? (.get to-visit-cache a-uri))
+                       (nil? (.get visited-cache a-uri))))
+                no-fragments)]
+    (distinct unseen)))
+
 (defn setup-enqueue-loop
   "Feed in extracted URIs."
   [init-chan final-chan config]
@@ -59,12 +78,17 @@
    (async/go-loop []
      (let [uris (-> final-chan
                     async/<!
-                    :input)
+                    :input
+                    (filter-uris config))
            uris-by-host (group-by uri/host uris)]
-       (doseq [host uris]
+       (println :inserting uris)
+       (doseq [[host host-uris] uris-by-host]
          (let [queue-name (keyword host)]
-           (doseq [to-visit-uri uris]
-             (put! q queue-name to-visit-uri))
+           (println queue-name)
+           (doseq [to-visit-uri host-uris]
+             (put! q queue-name to-visit-uri)
+             (.put (:to-visit-cache config)
+                   to-visit-uri "1"))
 
            (when-not (.get (:hosts-visited-cache config) host)
              (.put (:hosts-visited-cache config) host "1") ; mark host as visited
@@ -75,8 +99,7 @@
                  (async/>! init-chan {:input (deref next-uri-task)})
                  (deref next-uri-task))
                (recur)))))
-       ;(recur)
-       ))))
+       (recur)))))
 
 (defn crawl-loop
   "Sets up a crawl-job's loop"
