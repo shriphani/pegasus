@@ -41,9 +41,15 @@
        :visited-cache visited-cache
        :hosts-visited-cache hosts-visited-cache
        :update-cache (fn [obj]
+                       (let [visited-atom (:num-visited config)]
+                         (when (= 0 (rem @visited-atom 10))
+                           (println :num-visited visited-atom)))
                        (-> obj
                            :url
                            (remove-from-cache to-visit-cache))
+                       
+                       (swap! (:num-visited config)
+                              inc)
                        
                        (-> obj
                           :url

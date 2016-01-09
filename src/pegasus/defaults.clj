@@ -69,6 +69,11 @@
        (contains? queue
                   (:url obj)))))
 
+(defn default-stop-check
+  "Stops at 20 pages."
+  [config]
+  (<= 20 @(:num-visited config)))
+
 (defn default-bloom-update-fn
   [bloom-filter url]
   (bloom/insert bloom-filter url))
@@ -77,6 +82,7 @@
                       :frontier default-frontier-fn
                       :extractor default-extractor-fn
                       :writer default-writer-fn
+                      :stop default-stop-check
                       :job-dir "/tmp" ; by-default data-structures sit in /tmp. Do change this :)
                       :struct-dir "data-structures"
                       :logs-dir "logs"
@@ -92,4 +98,4 @@
                       :false-positive-probability 0.01
                       :visited-cache-name "visited-cache"
                       :to-visit-cache-name "to-visit-cache"
-                      :last-visited-time (atom {})})
+                      :num-visited (atom 0)})

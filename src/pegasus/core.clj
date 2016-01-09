@@ -101,6 +101,15 @@
                (recur)))))
        (recur)))))
 
+(defn setup-stop-loop
+  [config init-chan]
+  (let [stop-check (:stop config)]
+    (async/go-loop []
+      (when (stop-check config)
+        (do (println :stopping!)
+            (async/close! init-chan)))
+      (recur))))
+
 (defn crawl-loop
   "Sets up a crawl-job's loop"
   [config]
@@ -123,6 +132,8 @@
 
       (setup-enqueue-loop init-chan final-chan final-config)
 
+      (setup-stop-loop final-config init-chan)
+      
       ;; all systems are a go!
       (async/go
        (async/>! init-chan {:input  (:seed final-config)
