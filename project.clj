@@ -15,4 +15,5 @@
                  [org.clojure/clojure "1.7.0"]
                  [org.clojure/core.async "0.2.374"]
                  [org.clojure/tools.namespace "0.2.11"]
-                 [org.mapdb/mapdb "2.0-beta8"]])
+                 [org.mapdb/mapdb "2.0-beta8"]
+                 [prismatic/schema "1.0.4"]])

@@ -3,9 +3,11 @@
   (:require [bigml.sketchy.bloom :as bloom]
             [clj-http.client :as client]
             [clj-time.core :as t]
+            [clj-time.coerce :as c]
             [clojure.pprint :refer [pprint]]
             [net.cgrand.enlive-html :as html]
-            [org.bovinegenius.exploding-fish :as uri])
+            [org.bovinegenius.exploding-fish :as uri]
+            [schema.core :as s])
   (:import [clojure.lang PersistentQueue]
            [java.io StringReader]))
 
@@ -24,7 +26,8 @@
    :body (-> url
              get-request
              :body)
-   :time (t/now)})
+   :time (-> (t/now)
+             c/to-long)})
 
 (defn default-extractor-fn
   "Default extractor extracts URLs from anchor tags in
@@ -72,7 +75,9 @@
 (defn default-stop-check
   "Stops at 20 pages."
   [config]
-  (<= 20 @(:num-visited config)))
+  (let [num-visited (:num-visited
+                     @(:state config))]
+    (<= 20 num-visited)))
 
 (defn default-bloom-update-fn
   [bloom-filter url]
@@ -87,15 +92,19 @@
                       :struct-dir "data-structures"
                       :logs-dir "logs"
                       :corpus-dir "corpus"
-                      :pipeline [:frontier
-                                 :update-cache ; defined during the cache init phase
-                                 :extractor
-                                 :writer]
+                      :pipeline [[:frontier s/Str]
+                                 [:update-cache {:url s/Str,
+                                                 :body s/Str,
+                                                 :time s/Int}] ; defined during the cache init phase
+                                 [:extractor {:url s/Str,
+                                              :body s/Str,
+                                              :time s/Int}]
+                                 [:writer {:url s/Str
+                                           :body s/Str
+                                           :time s/Int
+                                           :extracted [s/Str]}]]
                       :host-last-ping-times (atom {})
                       :min-delay 2
-                                        ;:crawled-bloom-filter
-                      :estimated-crawl-size 1000000
-                      :false-positive-probability 0.01
                       :visited-cache-name "visited-cache"
                       :to-visit-cache-name "to-visit-cache"
-                      :num-visited (atom 0)})
+                      :state (atom {:num-visited 0})})

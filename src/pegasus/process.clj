@@ -5,7 +5,8 @@
   A process reads from an in-channel (not necessarily)
   and writes to an out-channel (not necessarily)"
   (:require [clojure.core.async :as async]
-            [clojure.repl :refer [pst]]))
+            [clojure.repl :refer [pst]]
+            [schema.core :as s]))
 
 (defn add-transducer
   [in xf]
@@ -18,13 +19,17 @@
     out))
 
 (defn run-process
-  [process-fn in-chan]
+  [process-fn process-schema in-chan]
   (add-transducer in-chan
                   (map #(try
                           (merge %
-                                 {:input (process-fn (:input %))})
+                                 {:input (->> %
+                                              :input
+                                              (s/validate process-schema)
+                                              process-fn)})
                           (catch Exception e
-                            (do (pst e)
+                            (do (println process-fn)
+                                (pst e)
                                 (merge % {:input nil})))))))
 
 (defn initialize-pipeline
@@ -42,10 +47,11 @@
         init-chan (async/chan (async/buffer 1024))
 
         final-out-chan (reduce
-                        (fn [last-out-channel component]
+                        (fn [last-out-channel [component component-schema]]
                           (println :current-component component)
                           (let [component-fn (get config component)] 
                             (run-process component-fn
+                                         component-schema
                                          last-out-channel)))
                         init-chan
                         pipeline)]

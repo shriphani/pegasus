@@ -106,12 +106,12 @@
   (let [stop-check (:stop config)]
     (async/go-loop []
       (when (stop-check config)
-        (do (println :stopping!)
+        (do ;(println :stopping!)
             (async/close! init-chan)))
       (recur))))
 
 (defn crawl-loop
-  "Sets up a crawl-job's loop"
+  "Sets up a crawl-job's loops"
   [config]
   (let [user-config (merge defaults/default-options config)
         
