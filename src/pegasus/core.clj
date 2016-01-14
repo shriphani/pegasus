@@ -1,6 +1,7 @@
 (ns pegasus.core
   (:require [bigml.sketchy.bloom :as bloom]
             [chime :refer [chime-ch]]
+            [clj-robots.core :as robots]
             [clj-time.core :as t]
             [clojure.core.async :as async]
             [clojure.java.io :as io]
@@ -70,6 +71,16 @@
                 no-fragments)]
     (distinct unseen)))
 
+(defn handle-robots-url
+  [queue queue-name robots-cache robots-url]
+  (let [body (-> a-url
+                 defaults/get-request
+                 :body)
+        host (uri/host robots-url)]
+    (if body
+      (.put cache host body)
+      (.put cache host "User-agent: *\nAllow: /"))))
+
 (defn setup-enqueue-loop
   "Feed in extracted URIs."
   [init-chan final-chan config]
@@ -81,22 +92,44 @@
                     :input
                     (filter-uris config))
            uris-by-host (group-by uri/host uris)]
+
        (println :inserting uris)
        (doseq [[host host-uris] uris-by-host]
          (let [queue-name (keyword host)]
            (println queue-name)
+           ;; first enqueue robots.txt if we've not seen
+           ;; it before
+           (when-not (.get (:hosts-visited-cache config) host)
+             (println :enqueing-robots.txt)
+             (let [robots-url (uri/resolve-uri (first host-uris)
+                                               "/robots.txt")]
+               (put! q queue-name robots-url)))
+           
            (doseq [to-visit-uri host-uris]
              (put! q queue-name to-visit-uri)
              (.put (:to-visit-cache config)
                    to-visit-uri "1"))
 
            (when-not (.get (:hosts-visited-cache config) host)
+
              (.put (:hosts-visited-cache config) host "1") ; mark host as visited
+
              (async/go-loop []
                (async/<! (async/timeout 10000))     ; delay. FIXME: must come from config
                (let [next-uri-task (take! q queue-name)]
                  (println next-uri-task)
-                 (async/>! init-chan {:input (deref next-uri-task)})
+                 (let [next-url (deref next-uri-task)]
+                   (if (= (uri/path next-url)
+                          "robots.txt")
+                     (handle-robots-url q
+                                        queue-name
+                                        (:robots-cache config)
+                                        next-url)
+                     (let [robots-txt (.get (:robot-cache config)
+                                            host)
+                           parsed-robots (robots/parse robots-txt)]
+                       (when (robots/crawlable? parsed-robots (uri/path next-url))
+                         (async/>! init-chan {:input next-url})))))
                  (deref next-uri-task))
                (recur)))))
        (recur)))))

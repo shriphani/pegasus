@@ -36,10 +36,12 @@
 
     (let [visited-cache (JCS/getInstance "visited")
           to-visit-cache (JCS/getInstance "tovisit")
+          robots-cache (JCA/getInstance "robotstxt")
           hosts-visited-cache (JCS/getInstance "hostsvisited")]
       {:to-visit-cache to-visit-cache
        :visited-cache visited-cache
        :hosts-visited-cache hosts-visited-cache
+       :robots-cache robots-cache
        :update-cache (fn [obj]
                        (let [num-visited (:num-visited
                                           @(:state config))]

@@ -107,4 +107,5 @@
                       :min-delay 2
                       :visited-cache-name "visited-cache"
                       :to-visit-cache-name "to-visit-cache"
+                      :robots-cache-name "robots-cache"
                       :state (atom {:num-visited 0})})

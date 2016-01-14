@@ -28,12 +28,23 @@ jcs.region.tovisit.cacheattributes.MaxSpoolPerRun=500
 jcs.region.tovisit.elementattributes=org.apache.commons.jcs.engine.ElementAttributes
 jcs.region.tovisit.elementattributes.IsEternal=true
 
+jcs.region.robotstxt=DC
+jcs.region.robotstxt.cacheattributes=org.apache.commons.jcs.engine.CompositeCacheAttributes
+jcs.region.robotstxt.cacheattributes.MaxObjects=1000
+jcs.region.robotstxt.cacheattributes.MemoryCacheName=org.apache.commons.jcs.engine.memory.lru.LRUMemoryCache
+jcs.region.robotstxt.cacheattributes.DiskUsagePatternName=UPDATE
+jcs.region.robotstxt.cacheattributes.UseMemoryShrinker=true
+jcs.region.robotstxt.cacheattributes.MaxMemoryIdleTime=3600
+jcs.region.robotstxt.cacheattributes.ShrinkerInterval=60
+jcs.region.robotstxt.cacheattributes.MaxSpoolPerRun=500
+jcs.region.robotstxt.elementattributes=org.apache.commons.jcs.engine.ElementAttributes
+jcs.region.robotstxt.elementattributes.IsEternal=true
+
 jcs.region.hostsvisited=
 jcs.region.hostsvisited.cacheattributes=org.apache.commons.jcs.engine.CompositeCacheAttributes
 jcs.region.hostsvisited.cacheattributes.MemoryCacheName=org.apache.commons.jcs.engine.memory.lru.LRUMemoryCache
 jcs.region.hostsvisited.elementattributes=org.apache.commons.jcs.engine.ElementAttributes
 jcs.region.hostsvisited.elementattributes.IsEternal=true
-
 
 jcs.auxiliary.DC=org.apache.commons.jcs.auxiliary.disk.indexed.IndexedDiskCacheFactory
 jcs.auxiliary.DC.attributes=org.apache.commons.jcs.auxiliary.disk.indexed.IndexedDiskCacheAttributes
