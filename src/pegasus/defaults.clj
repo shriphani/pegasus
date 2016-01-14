@@ -41,11 +41,18 @@
         
         url         (:url obj)
 
+        can-follow  (filter
+                     #(-> %
+                          :attrs
+                          :rel
+                          (= "nofollow"))
+                     anchor-tags)
+
         uris        (map
                      #(->> %
                            :attrs
                            :href)
-                     anchor-tags)
+                     can-follow)
 
         clean-uris  (filter identity uris)
         
