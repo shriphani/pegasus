@@ -11,3 +11,9 @@ pom.xml.asc
 .hg/
 *~*
 *#*
+
+# no logo files
+*.sketch
+
+# why does macos do this
+.DS_Store
