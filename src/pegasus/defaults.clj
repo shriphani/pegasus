@@ -65,11 +65,12 @@
   Default write is just a pprint"
   ([obj]
    (println "writer")
-   (:extracted obj))
+   obj)
   
-  ([obj wrtr]
-   (println "writer")
-   (:extracted obj)))
+  ([obj wrtr wrtr-lock]
+   (locking wrtr-lock
+     (pprint obj wrtr))
+   obj))
 
 (defn default-visited-check
   [obj queue visited]
