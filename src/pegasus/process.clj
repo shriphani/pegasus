@@ -21,16 +21,18 @@
 (defn run-process
   [process-fn process-schema in-chan]
   (add-transducer in-chan
-                  (map #(try
-                          (merge %
-                                 {:input (->> %
-                                              :input
-                                              (s/validate process-schema)
-                                              process-fn)})
-                          (catch Exception e
-                            (do (println process-fn)
-                                (pst e)
-                                (merge % {:input nil})))))))
+                  (comp (filter :input)
+                        (map #(try
+                                (println %)
+                                (merge %
+                                       {:input (->> %
+                                                    :input
+                                                    (s/validate process-schema)
+                                                    process-fn)})
+                                (catch Exception e
+                                  (do (println process-fn)
+                                      (pst e)
+                                      (merge % {:input nil}))))))))
 
 (defn initialize-pipeline
   "A pipeline contains kws - fn-map

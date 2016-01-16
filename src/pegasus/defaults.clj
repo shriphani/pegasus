@@ -12,19 +12,20 @@
            [java.io StringReader]))
 
 (defn get-request
-  [url]
+  [url user-agent]
   (println :getting url)
   (client/get url {:throw-exceptions false
                    :socket-timeout 1000
-                   :conn-timeout 1000}))
+                   :conn-timeout 1000
+                   :headers {"User-Agent" user-agent}}))
 
 (defn default-frontier-fn
   "The default frontier issues a GET request
   to the URL"
-  [url]
+  [url user-agent]
   {:url  url
    :body (-> url
-             get-request
+             (get-request user-agent)
              :body)
    :time (-> (t/now)
              c/to-long)})
@@ -92,7 +93,7 @@
   (bloom/insert bloom-filter url))
 
 (def default-options {:seed nil
-                      :frontier default-frontier-fn
+                      :frontier nil
                       :extractor default-extractor-fn
                       :writer default-writer-fn
                       :stop default-stop-check
@@ -112,7 +113,7 @@
                                            :time s/Int
                                            :extracted [s/Str]}]]
                       :host-last-ping-times (atom {})
-                      :min-delay 2
+                      :min-delay-ms 2000
                       :visited-cache-name "visited-cache"
                       :to-visit-cache-name "to-visit-cache"
                       :robots-cache-name "robots-cache"

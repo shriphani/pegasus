@@ -36,7 +36,7 @@
 
     (let [visited-cache (JCS/getInstance "visited")
           to-visit-cache (JCS/getInstance "tovisit")
-          robots-cache (JCA/getInstance "robotstxt")
+          robots-cache (JCS/getInstance "robotstxt")
           hosts-visited-cache (JCS/getInstance "hostsvisited")]
       {:to-visit-cache to-visit-cache
        :visited-cache visited-cache
@@ -47,7 +47,7 @@
                                           @(:state config))]
                          (when (= 0 (rem num-visited 10))
                            (println :num-visited num-visited)))
-
+                       
                        (-> obj
                            :url
                            (remove-from-cache to-visit-cache))
@@ -58,7 +58,7 @@
                               inc)
                        
                        (-> obj
-                          :url
+                           :url
                           (add-to-cache visited-cache))
                        
                        obj)})))
