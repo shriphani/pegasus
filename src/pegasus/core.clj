@@ -5,6 +5,7 @@
             [clj-time.core :as t]
             [clojure.core.async :as async]
             [clojure.java.io :as io]
+            [clojure.string :as string]
             [durable-queue :refer :all]
             [me.raynes.fs :as fs]
             [org.bovinegenius.exploding-fish :as uri]
@@ -39,9 +40,9 @@
 (defn setup-jobdir
   "Creates subdirs for data structures, logs, corpora etc."
   [job-dir logs-dir struct-dir corpus-dir]
-  (let [logs-dir-file (io/file job-dir logs-dir)
-        struct-dir-file (io/file job-dir struct-dir)
-        corpus-dir-file (io/file job-dir corpus-dir)]
+  (let [logs-dir-file (io/file logs-dir)
+        struct-dir-file (io/file struct-dir)
+        corpus-dir-file (io/file corpus-dir)]
 
     (mkdir-if-not-exists logs-dir-file)
     (mkdir-if-not-exists struct-dir-file)
@@ -151,10 +152,24 @@
   "Sets up a crawl-job's loops"
   [config]
   (let [user-config (merge defaults/default-options config)
+        job-dir (:job-dir config)
+        with-job-dir (merge user-config
+                            {:logs-dir (.getAbsolutePath
+                                        (io/file
+                                         job-dir
+                                         (:logs-dir config)))
+                             :struct-dir (.getAbsolutePath
+                                          (io/file
+                                           job-dir
+                                           (:struct-dir config)))
+                             :corpus-dir (.getAbsolutePath
+                                          (io/file
+                                           job-dir
+                                           (:corpus-dir config)))})
         
         with-cache-config (merge user-config
-                                 (setup-caches user-config))]
-
+                                 (setup-caches with-job-dir))]
+    
     (setup-jobdir (:job-dir with-cache-config)
                   (:logs-dir with-cache-config)
                   (:struct-dir with-cache-config)
@@ -174,9 +189,18 @@
       [init-chan final-chan final-config])))
 
 (defn crawl
-  "Main entry point."
+  "Main entry point.
+  Right now we have two ways of specifying seed URLs:
+  :seed-list [seed1, seed2, ...]
+  :seed-file /path/to/txt/file/with/seeds.
+  Use just 1 :D.
+
+  If you specify a destination (at :destination), all records
+  are finally written there. Otherwise, we pprint
+  to stdout."
   [config]
 
+  ;; enforce politeness
   (when (and (-> config :user-agent not)
              (-> config :impolite? not))
     (throw
@@ -187,24 +211,22 @@
                         x
                         (:user-agent config)))
         job-dir (:job-dir config)
-        logs-dir (io/file job-dir "logs")
-        struct-dir (io/file job-dir "data-structures")
-        corpus-dir (io/file job-dir "corpus")
 
-        [init-chan final-chan final-config*]
+        [init-chan final-chan final-config]
         (setup-crawl
          (merge config
                 {:frontier frontier-fn
-                 :job-dir job-dir
-                 :logs-dir (io/as-relative-path logs-dir)
-                 :struct-dir (io/as-relative-path struct-dir)
-                 :corpus-dir (io/as-relative-path corpus-dir)}))]
+                 :job-dir job-dir}))
 
-    (let [final-config final-config*]
+        seeds (if (:seed-file final-config)
+                (-> final-config
+                    :seed-file
+                    slurp
+                    string/split-lines))]
 
-      (println (:seed final-config))
       
-      (async/go
-        (async/>! init-chan {:input  (:seed final-config)
-                             :frontier frontier-fn
-                             :config final-config})))))
+    (async/go
+      (doseq [seed seeds]
+       (async/>! init-chan {:input  seed
+                            :frontier frontier-fn
+                            :config final-config})))))
