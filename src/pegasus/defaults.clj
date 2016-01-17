@@ -102,39 +102,36 @@
    :struct-dir "data-structures"
    :logs-dir "logs"})
 
-(defn make-absolute-path
-  [base-dir a-path]
-  (let [file (io/file a-path)]
-    (if (.isAbsolute file)
-      a-path
-      (let [full-path-file (io/file base-dir a-path)]
-        (.getAbsolutePath full-path-file)))))
-
 (defn mkdir-if-not-exists
   [path]
-  (let [file (io/file path)]
-   (when-not (.exists file)
-     (fs/mkdir (.getPath file)))))
+  (let [a-file (io/file path)]
+   (when-not (.exists a-file)
+     (fs/mkdir (.getPath a-file)))))
 
 (defn build-location-config
   [user-config]
-  (let [relative-paths (merge default-location-config user-config)]
-    ;; we are going to make these absolute paths
-    (into
-     {}
-     (map
-      (fn [[job-key rel-path]]
-        (let [absolute-path (if (not= job-key :job-dir)
-                              (make-absolute-path
-                               (:job-dir relative-paths)
-                               rel-path)
-                              (-> rel-path
-                                  io/file
-                                  (.getAbsolutePath)))]
-          (mkdir-if-not-exists absolute-path)
-          [job-key absolute-path]))
-      relative-paths))))
+  (let [specified-job-dir (io/file
+                           (:job-dir user-config))
 
+        corpus-dir (.getPath
+                    (fs/file specified-job-dir
+                             (:corpus-dir default-location-config)))
+        struct-dir (.getPath
+                    (fs/file specified-job-dir
+                             (:struct-dir default-location-config)))
+        logs-dir (.getPath
+                  (fs/file specified-job-dir
+                           (:logs-dir default-location-config)))]
+    (mkdir-if-not-exists specified-job-dir)
+    (mkdir-if-not-exists corpus-dir)
+    (mkdir-if-not-exists struct-dir)
+    (mkdir-if-not-exists logs-dir)
+    
+    (merge user-config
+           {:job-dir specified-job-dir
+            :corpus-dir corpus-dir
+            :struct-dir struct-dir
+            :logs-dir logs-dir})))
 
 (def default-options {:seed nil
                       :frontier nil
