@@ -188,6 +188,13 @@
 
       [init-chan final-chan final-config])))
 
+(defn enforce-politeness
+  [config]
+  (when (and (-> config :user-agent not)
+             (-> config :impolite? not))
+    (throw
+     (IllegalArgumentException. "Polite crawlers use a user-agent string."))))
+
 (defn crawl
   "Main entry point.
   Right now we have two ways of specifying seed URLs:
@@ -197,14 +204,13 @@
 
   If you specify a destination (at :destination), all records
   are finally written there. Otherwise, we pprint
-  to stdout."
+  to stdout.
+
+  Config keys that we understand:
+  :user-agent <user agent>"
   [config]
 
-  ;; enforce politeness
-  (when (and (-> config :user-agent not)
-             (-> config :impolite? not))
-    (throw
-     (Exception. "Polite crawlers use a user-agent string.")))
+  (enforce-politeness)
   
   (let [frontier-fn (fn [x]
                       (defaults/default-frontier-fn
@@ -230,3 +236,4 @@
        (async/>! init-chan {:input  seed
                             :frontier frontier-fn
                             :config final-config})))))
+
