@@ -104,9 +104,11 @@
 
 (defn make-absolute-path
   [base-dir a-path]
-  (->> a-path
-       (io/file base-dir)
-       (.getAbsolutePath)))
+  (let [file (io/file a-path)]
+    (if (.isAbsolute file)
+      a-path
+      (let [full-path-file (io/file base-dir a-path)]
+        (.getAbsolutePath full-path-file)))))
 
 (defn mkdir-if-not-exists
   [path]
@@ -122,12 +124,15 @@
      {}
      (map
       (fn [[job-key rel-path]]
-        (if (not= job-key :job-dir)
-         (let [absolute-path (make-absolute-path
-                              (:job-dir relative-paths)
-                              rel-path)]
-           (mkdir-if-not-exists absolute-path)
-           [job-key absolute-path])))
+        (let [absolute-path (if (not= job-key :job-dir)
+                              (make-absolute-path
+                               (:job-dir relative-paths)
+                               rel-path)
+                              (-> rel-path
+                                  io/file
+                                  (.getAbsolutePath)))]
+          (mkdir-if-not-exists absolute-path)
+          [job-key absolute-path]))
       relative-paths))))
 
 
