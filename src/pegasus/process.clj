@@ -6,6 +6,7 @@
   and writes to an out-channel (not necessarily)"
   (:require [clojure.core.async :as async]
             [clojure.repl :refer [pst]]
+            [pegasus.state]
             [schema.core :as s]))
 
 (declare ^:dynamic config)
@@ -25,9 +26,9 @@
   (add-transducer in-chan
                   (comp (filter :input)
                         (map #(try
-                                (println )
                                 (merge %
-                                       {:input (binding [config (:config %)]
+                                       {:input (binding [pegasus.state/config (:config %)
+                                                         config (:config %)]
                                                  (->> %
                                                       :input
                                                       (s/validate process-schema)

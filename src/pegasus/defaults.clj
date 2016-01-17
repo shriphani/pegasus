@@ -11,11 +11,10 @@
             [net.cgrand.enlive-html :as html]
             [org.bovinegenius.exploding-fish :as uri]
             [pegasus.cache :as cache]
+            [pegasus.state]
             [schema.core :as s])
   (:import [clojure.lang PersistentQueue]
            [java.io StringReader]))
-
-(declare config)
 
 (defn get-request
   [url user-agent]
@@ -25,18 +24,18 @@
                    :conn-timeout 1000
                    :headers {"User-Agent" user-agent}}))
 
-(defn ^:dynamic default-frontier-fn
+(defn default-frontier-fn
   "The default frontier issues a GET request
   to the URL"
   [url]
   {:url  url
    :body (-> url
-             (get-request (:user-agent config))
+             (get-request (:user-agent pegasus.state/config))
              :body)
    :time (-> (t/now)
              c/to-long)})
 
-(defn ^:dynamic default-extractor-fn
+(defn default-extractor-fn
   "Default extractor extracts URLs from anchor tags in
   a page"
   [obj]
@@ -85,9 +84,9 @@
 
 (defn default-stop-check
   "Stops at 20 pages."
-  [config]
+  [_]
   (let [num-visited (:num-visited
-                     @(:state config))]
+                     @(:state pegasus.state/config))]
     (<= 20 num-visited)))
 
 (defn default-bloom-update-fn
@@ -148,15 +147,24 @@
   [obj]
   (let [src-url (:url obj)
 
-        to-visit-cache (:to-visit-cache config)
-        visited-cache (:visited-cache config)
-        hosts-visited-cache (:hosts-visited-cache config)
+        to-visit-cache (:to-visit-cache pegasus.state/config)
+        visited-cache (:visited-cache pegasus.state/config)
+        hosts-visited-cache (:hosts-visited-cache pegasus.state/config)
 
         extracted-uris (:extracted obj)]
 
+    (println :lalalalal! pegasus.state/config)
+
+    ;; cache updates
     (cache/remove-from-cache src-url to-visit-cache)
     (cache/add-to-cache src-url visited-cache)
     (cache/add-to-cache (uri/host src-url) hosts-visited-cache)
+
+    ;; :state updates
+    (swap! (:state pegasus.state/config)
+           (fn [x]
+             (merge-with + x {:num-visited 1})))
+    
     (enqueue-uris extracted-uris)))
 
 (defn default-stop-check
@@ -166,11 +174,11 @@
   passed through it; it only looks at
   the crawl-state."
   [& _]
-  (let [crawl-state (:state config)
-        num-visited @(:num-visited crawl-state)]
+  (let [crawl-state (:state pegasus.state/config)
+        num-visited (:num-visited @crawl-state)]
     (when (<= 100 num-visited)
-      (let [init-chan (:init-chan config)
-            stop-sequence (:stop-sequence config)]
+      (let [init-chan (:init-chan pegasus.state/config)
+            stop-sequence (:stop-sequence pegasus.state/config)]
 
         ;; do not accept any more URIs
         (async/close! init-chan)
