@@ -11,6 +11,8 @@
   (:import [clojure.lang PersistentQueue]
            [java.io StringReader]))
 
+(declare config) ; the config is made available to all functions
+
 (defn get-request
   [url user-agent]
   (println :getting url)
@@ -91,6 +93,17 @@
 (defn default-bloom-update-fn
   [bloom-filter url]
   (bloom/insert bloom-filter url))
+
+(def default-location-config
+  {:job-dir nil
+   :corpus-dir "corpus"
+   :struct-dir "data-structures"
+   :logs-dir "logs"})
+
+(defn build-location-config
+  [user-config]
+  (merge default-location-options user-config))
+
 
 (def default-options {:seed nil
                       :frontier nil
