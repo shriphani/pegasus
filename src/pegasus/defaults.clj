@@ -4,14 +4,16 @@
             [clj-http.client :as client]
             [clj-time.core :as t]
             [clj-time.coerce :as c]
+            [clojure.java.io :as io]
             [clojure.pprint :refer [pprint]]
+            [me.raynes.fs :as fs]
             [net.cgrand.enlive-html :as html]
             [org.bovinegenius.exploding-fish :as uri]
             [schema.core :as s])
   (:import [clojure.lang PersistentQueue]
            [java.io StringReader]))
 
-(declare config) ; the config is made available to all functions
+(declare config)
 
 (defn get-request
   [url user-agent]
@@ -24,10 +26,10 @@
 (defn default-frontier-fn
   "The default frontier issues a GET request
   to the URL"
-  [url user-agent]
+  [url]
   {:url  url
    :body (-> url
-             (get-request user-agent)
+             (get-request (:user-agent config))
              :body)
    :time (-> (t/now)
              c/to-long)})
@@ -100,9 +102,33 @@
    :struct-dir "data-structures"
    :logs-dir "logs"})
 
+(defn make-absolute-path
+  [base-dir a-path]
+  (->> a-path
+       (io/file base-dir)
+       (.getAbsolutePath)))
+
+(defn mkdir-if-not-exists
+  [path]
+  (let [file (io/file path)]
+   (when-not (.exists file)
+     (fs/mkdir (.getPath file)))))
+
 (defn build-location-config
   [user-config]
-  (merge default-location-options user-config))
+  (let [relative-paths (merge default-location-config user-config)]
+    ;; we are going to make these absolute paths
+    (into
+     {}
+     (map
+      (fn [[job-key rel-path]]
+        (if (not= job-key :job-dir)
+         (let [absolute-path (make-absolute-path
+                              (:job-dir relative-paths)
+                              rel-path)]
+           (mkdir-if-not-exists absolute-path)
+           [job-key absolute-path])))
+      relative-paths))))
 
 
 (def default-options {:seed nil
