@@ -25,7 +25,7 @@
                    :conn-timeout 1000
                    :headers {"User-Agent" user-agent}}))
 
-(defn default-frontier-fn
+(defn ^:dynamic default-frontier-fn
   "The default frontier issues a GET request
   to the URL"
   [url]
@@ -36,10 +36,11 @@
    :time (-> (t/now)
              c/to-long)})
 
-(defn default-extractor-fn
+(defn ^:dynamic default-extractor-fn
   "Default extractor extracts URLs from anchor tags in
   a page"
   [obj]
+  (println :extracting (:url obj))
   (let [anchor-tags (-> obj
                         :body
                         (StringReader.)
@@ -52,7 +53,7 @@
                      #(-> %
                           :attrs
                           :rel
-                          (= "nofollow"))
+                          (not= "nofollow"))
                      anchor-tags)
 
         uris        (map
@@ -70,14 +71,9 @@
 (defn default-writer-fn
   "A writer writes to a writer or a stream.
   Default write is just a pprint"
-  ([obj]
-   (println "writer")
-   obj)
-  
-  ([obj wrtr wrtr-lock]
-   (locking wrtr-lock
-     (pprint obj wrtr))
-   obj))
+  [obj]
+  (pprint obj)
+  obj)
 
 (defn default-visited-check
   [obj queue visited]
@@ -203,7 +199,7 @@
                               :body s/Str,
                               :time s/Int
                               :extracted [s/Str]} 5]
-              [:test-and-halt s/Any]]})
+              [:test-and-halt s/Any 5]]})
 
 (defn enforce-pipeline-check
   [a-config]

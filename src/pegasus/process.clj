@@ -8,7 +8,7 @@
             [clojure.repl :refer [pst]]
             [schema.core :as s]))
 
-(declare config)
+(declare ^:dynamic config)
 
 (defn add-transducer
   [in xf parallelism]
@@ -21,18 +21,19 @@
     out))
 
 (defn run-process
-  [process-fn process-schema in-chan parallelism crawl-config]
+  [component process-schema in-chan parallelism crawl-config]
   (add-transducer in-chan
                   (comp (filter :input)
                         (map #(try
+                                (println )
                                 (merge %
-                                       {:input (binding [config crawl-config]
+                                       {:input (binding [config (:config %)]
                                                  (->> %
                                                       :input
                                                       (s/validate process-schema)
-                                                      process-fn))})
+                                                      ((get crawl-config component))))})
                                 (catch Exception e
-                                  (do (println process-fn)
+                                  (do (println component)
                                       (pst e)
                                       (merge % {:input nil}))))))
                   parallelism))
@@ -55,7 +56,7 @@
                         (fn [last-out-channel [component component-schema parallelism]]
                           (println :current-component component)
  
-                          (run-process (get config component)
+                          (run-process component
                                        component-schema
                                        last-out-channel
                                        parallelism

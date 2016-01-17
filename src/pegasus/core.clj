@@ -178,6 +178,15 @@
     (throw
      (IllegalArgumentException. "Polite crawlers use a user-agent string."))))
 
+(defn start-crawl
+  [init-chan config]
+  (println :starting-crawl)
+  (let [seeds (:seeds config)]
+    (async/go
+      (doseq [seed seeds]
+        (async/>! init-chan {:input  seed
+                             :config config})))))
+
 (defn crawl
   "Main entry point.
   Right now we have two ways of specifying seed URLs:
@@ -204,6 +213,6 @@
 
         init-chan     (process/initialize-pipeline final-config)]
 
-    ;(start-crawl init-chan config)
+    (start-crawl init-chan final-config)
     config))
 
