@@ -7,7 +7,6 @@
             [clojure.java.io :as io]
             [clojure.string :as string]
             [durable-queue :refer :all]
-            [me.raynes.fs :as fs]
             [org.bovinegenius.exploding-fish :as uri]
             [pegasus.cache :as cache]
             [pegasus.defaults :as defaults]
@@ -31,22 +30,6 @@
         (map
          t/seconds
          (iterate #(+ min-delay %) min-delay))))
-
-(defn mkdir-if-not-exists
-  [file]
-  (when-not (.exists file)
-    (fs/mkdir (.getPath file))))
-
-(defn setup-jobdir
-  "Creates subdirs for data structures, logs, corpora etc."
-  [job-dir logs-dir struct-dir corpus-dir]
-  (let [logs-dir-file (io/file logs-dir)
-        struct-dir-file (io/file struct-dir)
-        corpus-dir-file (io/file corpus-dir)]
-
-    (mkdir-if-not-exists logs-dir-file)
-    (mkdir-if-not-exists struct-dir-file)
-    (mkdir-if-not-exists corpus-dir-file)))
 
 (defn setup-caches
   "Sets up ehcache."
@@ -211,29 +194,13 @@
   [config]
 
   (enforce-politeness)
+
+  (let [final-config (-> config
+                         defaults/build-location-config)])
   
-  (let [frontier-fn (fn [x]
-                      (defaults/default-frontier-fn
-                        x
-                        (:user-agent config)))
-        job-dir (:job-dir config)
-
-        [init-chan final-chan final-config]
-        (setup-crawl
-         (merge config
-                {:frontier frontier-fn
-                 :job-dir job-dir}))
-
-        seeds (if (:seed-file final-config)
-                (-> final-config
-                    :seed-file
-                    slurp
-                    string/split-lines))]
-
-      
-    (async/go
-      (doseq [seed seeds]
-       (async/>! init-chan {:input  seed
-                            :frontier frontier-fn
-                            :config final-config})))))
+  (async/go
+    (doseq [seed seeds]
+      (async/>! init-chan {:input  seed
+                           :frontier frontier-fn
+                           :config final-config}))))
 
