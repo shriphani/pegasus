@@ -65,111 +65,111 @@
       (.put robots-cache host body)
       (.put robots-cache host "User-agent: *\nAllow: /"))))
 
-(defn setup-enqueue-loop
-  "URLs come in out of final-chan and we put them
-  in queues and stick them into init-chan."
-  [init-chan final-chan config]
-  (let [q (queues (:struct-dir config)
-                  {})]
-    (async/go-loop []
-      (let [uris (-> final-chan
-                     async/<!
-                     :input
-                     :extracted
-                     (filter-uris config))
-            uris-by-host (group-by uri/host uris)]
+;; (defn setup-enqueue-loop
+;;   "URLs come in out of final-chan and we put them
+;;   in queues and stick them into init-chan."
+;;   [init-chan final-chan config]
+;;   (let [q (queues (:struct-dir config)
+;;                   {})]
+;;     (async/go-loop []
+;;       (let [uris (-> final-chan
+;;                      async/<!
+;;                      :input
+;;                      :extracted
+;;                      (filter-uris config))
+;;             uris-by-host (group-by uri/host uris)]
         
-        (println :inserting uris)
-        (doseq [[host host-uris] uris-by-host]
-          (let [queue-name (keyword host)]
-            (println queue-name)
-            ;; first enqueue robots.txt if we've not seen
-            ;; it before
-            (when-not (.get (:hosts-visited-cache config) host)
-              (println :enqueing-robots.txt)
-              (let [robots-url (uri/resolve-uri (first host-uris)
-                                                "/robots.txt")]
-                (put! q queue-name robots-url)))
+;;         (println :inserting uris)
+;;         (doseq [[host host-uris] uris-by-host]
+;;           (let [queue-name (keyword host)]
+;;             (println queue-name)
+;;             ;; first enqueue robots.txt if we've not seen
+;;             ;; it before
+;;             (when-not (.get (:hosts-visited-cache config) host)
+;;               (println :enqueing-robots.txt)
+;;               (let [robots-url (uri/resolve-uri (first host-uris)
+;;                                                 "/robots.txt")]
+;;                 (put! q queue-name robots-url)))
             
-            (doseq [to-visit-uri host-uris]
-              (put! q queue-name to-visit-uri)
-              (.put (:to-visit-cache config)
-                    to-visit-uri "1"))
+;;             (doseq [to-visit-uri host-uris]
+;;               (put! q queue-name to-visit-uri)
+;;               (.put (:to-visit-cache config)
+;;                     to-visit-uri "1"))
             
-            (when-not (.get (:hosts-visited-cache config) host)
+;;             (when-not (.get (:hosts-visited-cache config) host)
               
-             (.put (:hosts-visited-cache config) host "1") ; mark host as visited
+;;              (.put (:hosts-visited-cache config) host "1") ; mark host as visited
              
-             (async/go-loop []
-               (async/<! (async/timeout 10000))     ; delay. FIXME: must come from config
-               (let [next-uri-task (take! q queue-name)]
-                 (println next-uri-task)
-                 (let [next-url (deref next-uri-task)]
-                   (if (= (uri/path next-url)
-                          "robots.txt")
-                     (handle-robots-url (:robots-cache config)
-                                        next-url
-                                        config)
-                     (let [robots-txt (.get (:robots-cache config)
-                                            host)
-                           parsed-robots (robots/parse robots-txt)]
-                       (when (robots/crawlable? parsed-robots
-                                                (uri/path next-url)
-                                                :user-agent
-                                                (:user-agent config))
-                         (async/>! init-chan {:input next-url})))))
-                 (deref next-uri-task))
-               (recur)))))
-       (recur)))))
+;;              (async/go-loop []
+;;                (async/<! (async/timeout 10000))     ; delay. FIXME: must come from config
+;;                (let [next-uri-task (take! q queue-name)]
+;;                  (println next-uri-task)
+;;                  (let [next-url (deref next-uri-task)]
+;;                    (if (= (uri/path next-url)
+;;                           "robots.txt")
+;;                      (handle-robots-url (:robots-cache config)
+;;                                         next-url
+;;                                         config)
+;;                      (let [robots-txt (.get (:robots-cache config)
+;;                                             host)
+;;                            parsed-robots (robots/parse robots-txt)]
+;;                        (when (robots/crawlable? parsed-robots
+;;                                                 (uri/path next-url)
+;;                                                 :user-agent
+;;                                                 (:user-agent config))
+;;                          (async/>! init-chan {:input next-url})))))
+;;                  (deref next-uri-task))
+;;                (recur)))))
+;;        (recur)))))
 
-(defn setup-stop-loop
-  [config init-chan]
-  (let [stop-check (:stop config)]
-    (async/go-loop []
-      (when (stop-check config)
-        (do ;(println :stopping!)
-            (async/close! init-chan)))
-      (recur))))
+;; (defn setup-stop-loop
+;;   [config init-chan]
+;;   (let [stop-check (:stop config)]
+;;     (async/go-loop []
+;;       (when (stop-check config)
+;;         (do ;(println :stopping!)
+;;             (async/close! init-chan)))
+;;       (recur))))
 
-(defn setup-crawl
-  "Sets up a crawl-job's loops"
-  [config]
-  (let [user-config (merge defaults/default-options config)
-        job-dir (:job-dir config)
-        with-job-dir (merge user-config
-                            {:logs-dir (.getAbsolutePath
-                                        (io/file
-                                         job-dir
-                                         (:logs-dir config)))
-                             :struct-dir (.getAbsolutePath
-                                          (io/file
-                                           job-dir
-                                           (:struct-dir config)))
-                             :corpus-dir (.getAbsolutePath
-                                          (io/file
-                                           job-dir
-                                           (:corpus-dir config)))})
+;; (defn setup-crawl
+;;   "Sets up a crawl-job's loops"
+;;   [config]
+;;   (let [user-config (merge defaults/default-options config)
+;;         job-dir (:job-dir config)
+;;         with-job-dir (merge user-config
+;;                             {:logs-dir (.getAbsolutePath
+;;                                         (io/file
+;;                                          job-dir
+;;                                          (:logs-dir config)))
+;;                              :struct-dir (.getAbsolutePath
+;;                                           (io/file
+;;                                            job-dir
+;;                                            (:struct-dir config)))
+;;                              :corpus-dir (.getAbsolutePath
+;;                                           (io/file
+;;                                            job-dir
+;;                                            (:corpus-dir config)))})
         
-        with-cache-config (merge user-config
-                                 (setup-caches with-job-dir))]
+;;         with-cache-config (merge user-config
+;;                                  (setup-caches with-job-dir))]
     
-    (setup-jobdir (:job-dir with-cache-config)
-                  (:logs-dir with-cache-config)
-                  (:struct-dir with-cache-config)
-                  (:corpus-dir with-cache-config))
+;;     (setup-jobdir (:job-dir with-cache-config)
+;;                   (:logs-dir with-cache-config)
+;;                   (:struct-dir with-cache-config)
+;;                   (:corpus-dir with-cache-config))
     
-    (let [[init-chan final-chan]
-          (process/initialize-pipeline with-cache-config)
+;;     (let [[init-chan final-chan]
+;;           (process/initialize-pipeline with-cache-config)
           
-          final-config (merge with-cache-config
-                              {:init-chan init-chan
-                               :final-chan final-chan})]
+;;           final-config (merge with-cache-config
+;;                               {:init-chan init-chan
+;;                                :final-chan final-chan})]
       
-      (setup-enqueue-loop init-chan final-chan final-config)
+;;       (setup-enqueue-loop init-chan final-chan final-config)
       
-      (setup-stop-loop final-config init-chan)
+;;       (setup-stop-loop final-config init-chan)
 
-      [init-chan final-chan final-config])))
+;;       [init-chan final-chan final-config])))
 
 (defn enforce-politeness
   [config]
@@ -193,14 +193,10 @@
   :user-agent <user agent>"
   [config]
 
-  (enforce-politeness)
+  (enforce-politeness config)
 
   (let [final-config (-> config
-                         defaults/build-location-config)])
-  
-  (async/go
-    (doseq [seed seeds]
-      (async/>! init-chan {:input  seed
-                           :frontier frontier-fn
-                           :config final-config}))))
+                         defaults/add-location-config  ;; sets up the job directory
+                         defaults/add-structs-config)] ;; sets up caches
+    final-config))
 

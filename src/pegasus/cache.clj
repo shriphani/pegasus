@@ -41,24 +41,4 @@
       {:to-visit-cache to-visit-cache
        :visited-cache visited-cache
        :hosts-visited-cache hosts-visited-cache
-       :robots-cache robots-cache
-       :update-cache (fn [obj]
-                       (let [num-visited (:num-visited
-                                          @(:state config))]
-                         (when (= 0 (rem num-visited 10))
-                           (println :num-visited num-visited)))
-                       
-                       (-> obj
-                           :url
-                           (remove-from-cache to-visit-cache))
-                       
-                       (swap! (:state config)
-                              update-in
-                              [:num-visited]
-                              inc)
-                       
-                       (-> obj
-                           :url
-                          (add-to-cache visited-cache))
-                       
-                       obj)})))
+       :robots-cache robots-cache})))

@@ -9,6 +9,7 @@
             [me.raynes.fs :as fs]
             [net.cgrand.enlive-html :as html]
             [org.bovinegenius.exploding-fish :as uri]
+            [pegasus.cache :as cache]
             [schema.core :as s])
   (:import [clojure.lang PersistentQueue]
            [java.io StringReader]))
@@ -108,10 +109,13 @@
    (when-not (.exists a-file)
      (fs/mkdir (.getPath a-file)))))
 
-(defn build-location-config
+(defn add-location-config
+  "Given a user-config, returns a new config
+  with location info added to it"
   [user-config]
   (let [specified-job-dir (io/file
-                           (:job-dir user-config))
+                           (or (:job-dir user-config)
+                               "/tmp"))
 
         corpus-dir (.getPath
                     (fs/file specified-job-dir
@@ -133,14 +137,15 @@
             :struct-dir struct-dir
             :logs-dir logs-dir})))
 
-(def default-options {:seed nil
-                      :frontier nil
+(defn add-structs-config
+  [user-config]
+  (let [cache-config (cache/initialize-caches user-config)]
+    (merge user-config cache-config)))
+
+(def default-options {:frontier nil
                       :extractor default-extractor-fn
                       :writer default-writer-fn
                       :stop default-stop-check
-                      :job-dir "/tmp" ; by-default data-structures sit in /tmp. Do change this :)
-                      :struct-dir "data-structures"
-                      :logs-dir "logs"
                       :corpus-dir "corpus"
                       :pipeline [[:frontier s/Str]
                                  [:update-cache {:url s/Str,
