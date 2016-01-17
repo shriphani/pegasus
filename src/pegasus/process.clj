@@ -8,31 +8,34 @@
             [clojure.repl :refer [pst]]
             [schema.core :as s]))
 
+(declare config)
+
 (defn add-transducer
-  [in xf]
+  [in xf parallelism]
   (let [out (async/chan (async/buffer 2048)
                         identity
                         (fn [x]
                           (println x)
                           nil))]
-    (async/pipeline-blocking 5 out xf in)
+    (async/pipeline-blocking parallelism out xf in)
     out))
 
 (defn run-process
-  [process-fn process-schema in-chan]
+  [process-fn process-schema in-chan parallelism crawl-config]
   (add-transducer in-chan
                   (comp (filter :input)
                         (map #(try
-                                (println %)
                                 (merge %
-                                       {:input (->> %
-                                                    :input
-                                                    (s/validate process-schema)
-                                                    process-fn)})
+                                       {:input (binding [config crawl-config]
+                                                 (->> %
+                                                      :input
+                                                      (s/validate process-schema)
+                                                      process-fn))})
                                 (catch Exception e
                                   (do (println process-fn)
                                       (pst e)
-                                      (merge % {:input nil}))))))))
+                                      (merge % {:input nil}))))))
+                  parallelism))
 
 (defn initialize-pipeline
   "A pipeline contains kws - fn-map
@@ -49,13 +52,15 @@
         init-chan (async/chan (async/buffer 1024))
 
         final-out-chan (reduce
-                        (fn [last-out-channel [component component-schema]]
+                        (fn [last-out-channel [component component-schema parallelism]]
                           (println :current-component component)
-                          (let [component-fn (get config component)] 
-                            (run-process component-fn
-                                         component-schema
-                                         last-out-channel)))
+ 
+                          (run-process (get config component)
+                                       component-schema
+                                       last-out-channel
+                                       parallelism
+                                       config))
                         init-chan
                         pipeline)]
 
-    [init-chan final-out-chan]))
+    init-chan))

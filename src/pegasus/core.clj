@@ -195,8 +195,15 @@
 
   (enforce-politeness config)
 
-  (let [final-config (-> config
-                         defaults/add-location-config  ;; sets up the job directory
-                         defaults/add-structs-config)] ;; sets up caches
-    final-config))
+  (let [final-config* (-> config
+                          defaults/add-location-config     ;; sets up the job directory
+                          defaults/add-structs-config      ;; sets up caches
+                          defaults/build-pipeline-config)  ;; builds a pipeline
+        
+        final-config  (merge defaults/default-options final-config*)
+
+        init-chan     (process/initialize-pipeline final-config)]
+
+    ;(start-crawl init-chan config)
+    config))
 

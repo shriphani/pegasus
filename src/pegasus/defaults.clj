@@ -4,6 +4,7 @@
             [clj-http.client :as client]
             [clj-time.core :as t]
             [clj-time.coerce :as c]
+            [clojure.core.async :as async]
             [clojure.java.io :as io]
             [clojure.pprint :refer [pprint]]
             [me.raynes.fs :as fs]
@@ -142,25 +143,84 @@
   (let [cache-config (cache/initialize-caches user-config)]
     (merge user-config cache-config)))
 
-(def default-options {:frontier nil
-                      :extractor default-extractor-fn
-                      :writer default-writer-fn
-                      :stop default-stop-check
-                      :corpus-dir "corpus"
-                      :pipeline [[:frontier s/Str]
-                                 [:update-cache {:url s/Str,
-                                                 :body s/Str,
-                                                 :time s/Int}] ; defined during the cache init phase
-                                 [:extractor {:url s/Str,
-                                              :body s/Str,
-                                              :time s/Int}]
-                                 [:writer {:url s/Str
-                                           :body s/Str
-                                           :time s/Int
-                                           :extracted [s/Str]}]]
-                      :host-last-ping-times (atom {})
-                      :min-delay-ms 2000
-                      :visited-cache-name "visited-cache"
-                      :to-visit-cache-name "to-visit-cache"
-                      :robots-cache-name "robots-cache"
+(defn enqueue-uris
+  [obj]
+  obj)
+
+(defn default-update-state
+  "Update caches, insert new URLs"
+  [obj]
+  (let [src-url (:url obj)
+
+        to-visit-cache (:to-visit-cache config)
+        visited-cache (:visited-cache config)
+        hosts-visited-cache (:hosts-visited-cache config)
+
+        extracted-uris (:extracted obj)]
+
+    (cache/remove-from-cache src-url to-visit-cache)
+    (cache/add-to-cache src-url visited-cache)
+    (cache/add-to-cache (uri/host src-url) hosts-visited-cache)
+    (enqueue-uris extracted-uris)))
+
+(defn default-stop-check
+  "Stops at 100 documents. This
+  function is part of the crawl
+  pipeline but doesn't use any of the objects being
+  passed through it; it only looks at
+  the crawl-state."
+  [& _]
+  (let [crawl-state (:state config)
+        num-visited @(:num-visited crawl-state)]
+    (when (<= 100 num-visited)
+      (let [init-chan (:init-chan config)
+            stop-sequence (:stop-sequence config)]
+
+        ;; do not accept any more URIs
+        (async/close! init-chan)
+
+        ;; any destructors needed are placed
+        ;; here during the crawl phase
+        (when stop-sequence
+         (doseq [stop-fn (stop-sequence)]
+           (stop-fn)))))))
+
+(def default-pipeline-config
+  {:frontier default-frontier-fn
+   :extractor default-extractor-fn
+   :writer default-writer-fn
+   :update-state default-update-state
+   :test-and-halt default-stop-check
+   :pipeline [[:frontier s/Str 5]
+              [:extractor {:url s/Str,
+                           :body s/Str,
+                           :time s/Int} 5]
+              [:writer {:url s/Str
+                        :body s/Str
+                        :time s/Int
+                        :extracted [s/Str]} 5]
+              [:update-state {:url s/Str,
+                              :body s/Str,
+                              :time s/Int
+                              :extracted [s/Str]} 5]
+              [:test-and-halt s/Any]]})
+
+(defn enforce-pipeline-check
+  [a-config]
+  (let [pipeline (:pipeline a-config)]
+    (doseq [[component-name _] pipeline]
+      (when-not (get a-config component-name)
+        (throw
+         (IllegalArgumentException.
+          (str "Component " component-name " missing in your config.")))))))
+
+(defn build-pipeline-config
+  [user-config]
+  (let [new-config (merge default-pipeline-config user-config)]
+
+    (enforce-pipeline-check new-config)
+
+    new-config))
+
+(def default-options {:min-delay-ms 2000
                       :state (atom {:num-visited 0})})
