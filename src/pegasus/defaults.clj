@@ -203,7 +203,9 @@
       obj
       (merge obj
              {:extracted
-              (filter robots-filter (:extracted obj))}))))
+              (filter #(and %
+                            (robots-filter %))
+                      (:extracted obj))}))))
 
 (def default-pipeline-config
   {:frontier default-frontier-fn

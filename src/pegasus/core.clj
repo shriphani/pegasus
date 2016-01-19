@@ -78,8 +78,7 @@
   (let [seeds (:seeds config)]
     (async/go
       (doseq [seed seeds]
-        (async/>! init-chan {:input  seed
-                             :config config})))))
+        (queue/enqueue-url seed)))))
 
 (defn crawl
   "Main entry point.
