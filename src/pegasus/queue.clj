@@ -1,10 +1,26 @@
 (ns pegasus.queue
   "Enqueue and dequeue operations"
-  (:require [clojure.core.async :as async]
+  (:require [clj-http.client :as client]
+            [clojure.core.async :as async]
             [durable-queue :refer :all]
             [org.bovinegenius.exploding-fish :as uri]
             [pegasus.cache :as cache]
             [pegasus.state :as state]))
+
+(defn handle-robots-url
+  [url]
+  (let [robots-payload (try
+                         (:body
+                          (client/get url
+                                      {:socket-timeout 1000
+                                       :conn-timeout 1000
+                                       :headers
+                                       {"User-Agent"
+                                        (:user-agent state/config)}}))
+                         (catch Exception e nil))]
+    (if robots-payload
+      (cache/add-to-cache robots-payload (:robots-cache state/config))
+      (cache/add-to-cache "user-agent *\nallow /" (:robots-cache state/config)))))
 
 (defn setup-queue-worker
   [q q-name]
@@ -22,8 +38,10 @@
       ;; it through the pipeline
       (let [task (take! q q-name)
             url (deref task)]
-        (async/>! init-chan {:input url
-                             :config state/config}))
+        (if (= (uri/path url) "/robots.txt")
+          (handle-robots-url url)
+          (async/>! init-chan {:input url
+                               :config state/config})))
       
       (recur))))
 
@@ -39,19 +57,22 @@
         struct-dir (:struct-dir state/config)
         q (queues struct-dir {:slab-size 1000})
 
-        visited-hosts (:hosts-visited-cache state/config)]
+        visited-hosts (:hosts-visited-cache state/config)
+        to-visit-cache (:to-visit-cache state/config)]
 
     ;; before we first hit a host, we need to confirm
     ;; that robots.txt has been obtained.
     ;; if not, we enqueue robots.txt and start monitoring
     ;; that queue.
+    (println :enqueue url)
     (when-not (.get visited-hosts (uri/host url))
       (enqueue-robots url q visited-hosts)
 
       (setup-queue-worker q q-name))
     
     ;; insert this URL.
-    (put! q q-name url)))
+    (put! q q-name url)
+    (cache/add-to-cache url to-visit-cache)))
 
 (defn enqueue-pipeline
   "A pipeline component that consumes urls

@@ -21,8 +21,7 @@
 (defn get-request
   [url user-agent]
   (println :getting url)
-  (client/get url {:throw-exceptions false
-                   :socket-timeout 1000
+  (client/get url {:socket-timeout 1000
                    :conn-timeout 1000
                    :headers {"User-Agent" user-agent}}))
 
@@ -185,15 +184,24 @@
 
 (defn robots-filter
   [a-uri]
-  (and a-uri
-       (let [host (uri/host a-uri)
-             robots-cache (:robots-cache pegasus.state/config)
-             robots-txt (.get robots-cache host)
-             parsed (robots/parse robots-txt)]
-         (robots/crawlable? robots-txt
-                            (uri/path a-uri)
-                            :user-agent
-                            (:user-agent pegasus.state/config)))))
+  (let [host (uri/host a-uri)
+        robots-cache (:robots-cache pegasus.state/config)
+        robots-txt (.get robots-cache host)
+        parsed (robots/parse robots-txt)]
+    (robots/crawlable? robots-txt
+                       (uri/path a-uri)
+                       :user-agent
+                       (:user-agent pegasus.state/config))))
+
+(defn not-visited
+  [a-uri]
+  (let [visited-cache (:visited-cache pegasus.state/config)]
+    (not (.get visited-cache a-uri))))
+
+(defn not-enqueued
+  [a-uri]
+  (let [to-visit-cache (:visited-cache pegasus.state/config)]
+    (not (.get to-visit-cache a-uri))))
 
 (defn default-filter
   "By default, we ignore robots.txt urls"
@@ -203,9 +211,12 @@
       obj
       (merge obj
              {:extracted
-              (filter #(and %
-                            (robots-filter %))
-                      (:extracted obj))}))))
+              (distinct
+               (filter #(and %
+                             (robots-filter %)
+                             (not-visited %)
+                             (not-enqueued %))
+                       (:extracted obj)))}))))
 
 (def default-pipeline-config
   {:frontier default-frontier-fn

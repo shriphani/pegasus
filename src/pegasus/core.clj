@@ -10,7 +10,8 @@
             [org.bovinegenius.exploding-fish :as uri]
             [pegasus.cache :as cache]
             [pegasus.defaults :as defaults]
-            [pegasus.process :as process]))
+            [pegasus.process :as process]
+            [pegasus.queue :as queue]))
 
 (defn alternate-swap!
   "This version returns the swapped out value as well"
@@ -78,7 +79,8 @@
   (let [seeds (:seeds config)]
     (async/go
       (doseq [seed seeds]
-        (queue/enqueue-url seed)))))
+        (binding [pegasus.state/config config]
+          (queue/enqueue-url seed))))))
 
 (defn crawl
   "Main entry point.
