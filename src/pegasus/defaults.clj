@@ -2,6 +2,7 @@
   "Contains default components"
   (:require [bigml.sketchy.bloom :as bloom]
             [clj-http.client :as client]
+            [clj-robots.core :as robots]
             [clj-time.core :as t]
             [clj-time.coerce :as c]
             [clojure.core.async :as async]
@@ -11,6 +12,7 @@
             [net.cgrand.enlive-html :as html]
             [org.bovinegenius.exploding-fish :as uri]
             [pegasus.cache :as cache]
+            [pegasus.queue :as queue]
             [pegasus.state]
             [schema.core :as s])
   (:import [clojure.lang PersistentQueue]
@@ -138,10 +140,6 @@
   (let [cache-config (cache/initialize-caches user-config)]
     (merge user-config cache-config)))
 
-(defn enqueue-uris
-  [obj]
-  obj)
-
 (defn default-update-state
   "Update caches, insert new URLs"
   [obj]
@@ -153,8 +151,6 @@
 
         extracted-uris (:extracted obj)]
 
-    (println :lalalalal! pegasus.state/config)
-
     ;; cache updates
     (cache/remove-from-cache src-url to-visit-cache)
     (cache/add-to-cache src-url visited-cache)
@@ -163,9 +159,7 @@
     ;; :state updates
     (swap! (:state pegasus.state/config)
            (fn [x]
-             (merge-with + x {:num-visited 1})))
-    
-    (enqueue-uris extracted-uris)))
+             (merge-with + x {:num-visited 1})))))
 
 (defn default-stop-check
   "Stops at 100 documents. This
@@ -189,12 +183,36 @@
          (doseq [stop-fn (stop-sequence)]
            (stop-fn)))))))
 
+(defn robots-filter
+  [a-uri]
+  (and a-uri
+       (let [host (uri/host a-uri)
+             robots-cache (:robots-cache pegasus.state/config)
+             robots-txt (.get robots-cache host)
+             parsed (robots/parse robots-txt)]
+         (robots/crawlable? robots-txt
+                            (uri/path a-uri)
+                            :user-agent
+                            (:user-agent pegasus.state/config)))))
+
+(defn default-filter
+  "By default, we ignore robots.txt urls"
+  [obj]
+  (let [host (-> obj :url uri/host)]
+    (if-not (:impolite? pegasus.state/config)
+      obj
+      (merge obj
+             {:extracted
+              (filter robots-filter (:extracted obj))}))))
+
 (def default-pipeline-config
   {:frontier default-frontier-fn
    :extractor default-extractor-fn
    :writer default-writer-fn
+   :enqueue queue/enqueue-pipeline
    :update-state default-update-state
    :test-and-halt default-stop-check
+   :filter default-filter
    :pipeline [[:frontier s/Str 5]
               [:extractor {:url s/Str,
                            :body s/Str,
@@ -203,6 +221,14 @@
                         :body s/Str
                         :time s/Int
                         :extracted [s/Str]} 5]
+              [:filter {:url s/Str
+                        :body s/Str
+                        :time s/Int
+                        :extracted [s/Str]} 5]
+              [:enqueue {:url s/Str
+                         :body s/Str
+                         :time s/Int
+                         :extracted [s/Str]} 5]
               [:update-state {:url s/Str,
                               :body s/Str,
                               :time s/Int
