@@ -13,7 +13,7 @@
                  [me.raynes/fs "1.4.6"]
                  [org.apache.commons/commons-jcs-core "2.0-beta-1"]
                  [org.bovinegenius/exploding-fish "0.3.4"]
-                 [org.clojure/clojure "1.7.0"]
+                 [org.clojure/clojure "1.8.0"]
                  [org.clojure/core.async "0.2.374"]
                  [org.clojure/tools.namespace "0.2.11"]
                  [org.mapdb/mapdb "2.0-beta8"]

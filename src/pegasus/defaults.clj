@@ -64,15 +64,35 @@
 
         clean-uris  (filter identity uris)
         
-        extracted   {:extracted (map #(uri/resolve-uri url %)
-                                     clean-uris)}]
+        extracted   {:extracted (filter
+                                 (fn [x]
+                                   (= (uri/host x) "blog.shriphani.com"))
+                                 (map #(uri/resolve-uri url %)
+                                      clean-uris))}]
     (merge obj extracted)))
 
 (defn default-writer-fn
-  "A writer writes to a writer or a stream.
-  Default write is just a pprint"
+  "The default writer pretty prints the input object
+  to a corpus file."
   [obj]
-  (pprint obj)
+  (locking (:state pegasus.state/config)
+   (let [wrtr (:writer @(:state pegasus.state/config))]
+    
+     ;; open the writer if not already opened.
+     (when (nil? wrtr)
+       (swap! (:state pegasus.state/config)
+              (fn [x]
+                (merge-with + x {:writer (io/writer
+                                          (io/file (:corpus-dir pegasus.state/config)
+                                                   "corpus.clj"))}))))))
+    
+    ;; now try again :) - ugly code I know :)
+
+  (let [wrtr (:writer @(:state pegasus.state/config))]
+    
+    (.write wrtr (str (clojure.pprint/write obj :stream nil)
+                      "\n"))
+    (.flush wrtr))
   obj)
 
 (defn default-visited-check
@@ -82,13 +102,6 @@
              visited)
        (contains? queue
                   (:url obj)))))
-
-(defn default-stop-check
-  "Stops at 20 pages."
-  [_]
-  (let [num-visited (:num-visited
-                     @(:state pegasus.state/config))]
-    (<= 20 num-visited)))
 
 (defn default-bloom-update-fn
   [bloom-filter url]
@@ -158,7 +171,9 @@
     ;; :state updates
     (swap! (:state pegasus.state/config)
            (fn [x]
-             (merge-with + x {:num-visited 1})))))
+             (merge-with + x {:num-visited 1})))
+
+    obj))
 
 (defn default-stop-check
   "Stops at 100 documents. This
@@ -169,12 +184,15 @@
   [& _]
   (let [crawl-state (:state pegasus.state/config)
         num-visited (:num-visited @crawl-state)]
+    (println :num-visited num-visited)
     (when (<= 100 num-visited)
       (let [init-chan (:init-chan pegasus.state/config)
             stop-sequence (:stop-sequence pegasus.state/config)]
-
+        
         ;; do not accept any more URIs
         (async/close! init-chan)
+
+        (println :stopping-crawl!)
 
         ;; any destructors needed are placed
         ;; here during the crawl phase
@@ -187,11 +205,13 @@
   (let [host (uri/host a-uri)
         robots-cache (:robots-cache pegasus.state/config)
         robots-txt (.get robots-cache host)
-        parsed (robots/parse robots-txt)]
-    (robots/crawlable? robots-txt
-                       (uri/path a-uri)
-                       :user-agent
-                       (:user-agent pegasus.state/config))))
+        parsed (robots/parse robots-txt)
+        impolite? (:impolite? pegasus.state/config)]
+    (or impolite?
+        (robots/crawlable? robots-txt
+                           (uri/path a-uri)
+                           :user-agent
+                           (:user-agent pegasus.state/config)))))
 
 (defn not-visited
   [a-uri]
@@ -200,23 +220,20 @@
 
 (defn not-enqueued
   [a-uri]
-  (let [to-visit-cache (:visited-cache pegasus.state/config)]
+  (let [to-visit-cache (:to-visit-cache pegasus.state/config)]
     (not (.get to-visit-cache a-uri))))
 
 (defn default-filter
   "By default, we ignore robots.txt urls"
   [obj]
-  (let [host (-> obj :url uri/host)]
-    (if-not (:impolite? pegasus.state/config)
-      obj
-      (merge obj
-             {:extracted
-              (distinct
-               (filter #(and %
-                             (robots-filter %)
-                             (not-visited %)
-                             (not-enqueued %))
-                       (:extracted obj)))}))))
+  (merge obj
+         {:extracted
+          (distinct
+           (filter #(and %
+                         (robots-filter %)
+                         (not-visited %)
+                         (not-enqueued %))
+                   (:extracted obj)))}))
 
 (def default-pipeline-config
   {:frontier default-frontier-fn
@@ -230,11 +247,15 @@
               [:extractor {:url s/Str,
                            :body s/Str,
                            :time s/Int} 5]
-              [:writer {:url s/Str
+              [:update-state {:url s/Str,
+                              :body s/Str,
+                              :time s/Int
+                              :extracted [s/Str]} 5]
+              [:filter {:url s/Str
                         :body s/Str
                         :time s/Int
                         :extracted [s/Str]} 5]
-              [:filter {:url s/Str
+              [:writer {:url s/Str
                         :body s/Str
                         :time s/Int
                         :extracted [s/Str]} 5]
@@ -242,10 +263,6 @@
                          :body s/Str
                          :time s/Int
                          :extracted [s/Str]} 5]
-              [:update-state {:url s/Str,
-                              :body s/Str,
-                              :time s/Int
-                              :extracted [s/Str]} 5]
               [:test-and-halt s/Any 5]]})
 
 (defn enforce-pipeline-check

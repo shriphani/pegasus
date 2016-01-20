@@ -18,12 +18,14 @@
                                        {"User-Agent"
                                         (:user-agent state/config)}}))
                          (catch Exception e nil))]
+    
     (if robots-payload
       (cache/add-to-cache robots-payload (:robots-cache state/config))
-      (cache/add-to-cache "user-agent *\nallow /" (:robots-cache state/config)))))
+      (cache/add-to-cache "User-Agent *\nAllow /" (:robots-cache state/config)))))
 
 (defn setup-queue-worker
   [q q-name]
+  (println :setting-up-q-worker)
   (let [default-delay (:min-delay-ms state/config)
         init-chan (:init-chan state/config)]
     (async/go-loop []
@@ -34,14 +36,20 @@
         (+ default-delay
            (rand-int 1000))))
 
+      (println :default-delay default-delay)
+      
       ;; draw a url and pass
       ;; it through the pipeline
-      (let [task (take! q q-name)
-            url (deref task)]
-        (if (= (uri/path url) "/robots.txt")
-          (handle-robots-url url)
-          (async/>! init-chan {:input url
-                               :config state/config})))
+      (println q-name)
+      (let [task (take! q q-name 10 nil)]
+        (when-not (nil? task)
+          (let [url (deref task)]
+            (println :obtained url)
+            (if (= (uri/path url) "/robots.txt")
+              (handle-robots-url url)
+              (async/>! init-chan {:input url
+                                   :config state/config}))
+            (complete! task))))
       
       (recur))))
 
@@ -49,14 +57,15 @@
   [a-url q visited-hosts-cache]
   (let [q-name (-> a-url uri/host keyword)
         robots-url (uri/resolve-uri a-url "/robots.txt")]
-    (put! q q-name robots-url)))
+    (put! q q-name robots-url)
+    (cache/add-to-cache (uri/host a-url)
+                        visited-hosts-cache)))
 
 (defn enqueue-url
   [url]
   (let [q-name (-> url uri/host keyword)
         struct-dir (:struct-dir state/config)
-        q (queues struct-dir {:slab-size 1000})
-
+        q (:queue state/config)
         visited-hosts (:hosts-visited-cache state/config)
         to-visit-cache (:to-visit-cache state/config)]
 
@@ -83,3 +92,9 @@
     (doseq [uri extracted-uris]
       (enqueue-url uri))
     obj))
+
+(defn build-queue-config
+  [config]
+  (let [q (queues struct-dir {:slab-size 1024
+                              :fsync-take? true})]
+    {merge config {:queue q}}))

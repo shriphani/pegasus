@@ -24,8 +24,7 @@
 (defn run-process
   [component process-schema in-chan parallelism crawl-config]
   (add-transducer in-chan
-                  (comp (filter :input)
-                        (map #(try
+                  (comp (map #(try
                                 (merge %
                                        {:input (binding [pegasus.state/config (:config %)
                                                          config (:config %)]
@@ -36,7 +35,8 @@
                                 (catch Exception e
                                   (do (println component)
                                       (pst e)
-                                      (merge % {:input nil}))))))
+                                      (merge % {:input nil})))))
+                        (filter :input))
                   parallelism))
 
 (defn initialize-pipeline
