@@ -7,7 +7,11 @@
   (:require [clojure.core.async :as async]
             [clojure.repl :refer [pst]]
             [pegasus.state]
-            [schema.core :as s]))
+            [schema.core :as s]
+            [taoensso.timbre :as timbre
+             :refer (log  trace  debug  info  warn  error  fatal  report
+                          logf tracef debugf infof warnf errorf fatalf reportf
+                          spy get-env log-env)]))
 
 (declare ^:dynamic config)
 
@@ -16,7 +20,7 @@
   (let [out (async/chan (async/buffer 2048)
                         identity
                         (fn [x]
-                          (println x)
+                          (info x)
                           nil))]
     (async/pipeline-blocking parallelism out xf in)
     out))
@@ -33,7 +37,7 @@
                                                       (s/validate process-schema)
                                                       ((get crawl-config component))))})
                                 (catch Exception e
-                                  (do (println component)
+                                  (do (info component)
                                       (pst e)
                                       (merge % {:input nil})))))
                         (filter :input))
@@ -48,14 +52,14 @@
   that speaks to a queue.
   The last component is the writer"
   [config]
-  (println (:pipeline config))
+  (info (:pipeline config))
   (let [pipeline (:pipeline config)
 
         init-chan (async/chan (async/buffer 1024))
 
         final-out-chan (reduce
                         (fn [last-out-channel [component component-schema parallelism]]
-                          (println :current-component component)
+                          (info :current-component component)
  
                           (run-process component
                                        component-schema

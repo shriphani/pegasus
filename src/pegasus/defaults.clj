@@ -14,13 +14,17 @@
             [pegasus.cache :as cache]
             [pegasus.queue :as queue]
             [pegasus.state]
-            [schema.core :as s])
+            [schema.core :as s]
+            [taoensso.timbre :as timbre
+             :refer (log  trace  debug  info  warn  error  fatal  report
+                          logf tracef debugf infof warnf errorf fatalf reportf
+                          spy get-env log-env)])
   (:import [clojure.lang PersistentQueue]
            [java.io StringReader]))
 
 (defn get-request
   [url user-agent]
-  (println :getting url)
+  (info :getting url)
   (client/get url {:socket-timeout 1000
                    :conn-timeout 1000
                    :headers {"User-Agent" user-agent}}))
@@ -40,7 +44,7 @@
   "Default extractor extracts URLs from anchor tags in
   a page"
   [obj]
-  (println :extracting (:url obj))
+  (info :extracting (:url obj))
   (let [anchor-tags (-> obj
                         :body
                         (StringReader.)
@@ -184,7 +188,7 @@
   [& _]
   (let [crawl-state (:state pegasus.state/config)
         num-visited (:num-visited @crawl-state)]
-    (println :num-visited num-visited)
+    (info :num-visited num-visited)
     (when (<= 100 num-visited)
       (let [init-chan (:init-chan pegasus.state/config)
             stop-sequence (:stop-sequence pegasus.state/config)]
@@ -192,7 +196,7 @@
         ;; do not accept any more URIs
         (async/close! init-chan)
 
-        (println :stopping-crawl!)
+        (info :stopping-crawl!)
 
         ;; any destructors needed are placed
         ;; here during the crawl phase

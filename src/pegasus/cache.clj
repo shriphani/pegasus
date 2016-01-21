@@ -1,7 +1,11 @@
 (ns pegasus.cache
   "Clojure wrapper around JCS"
   (:require [clojure.java.io :as io]
-            [clojure.string :as string])
+            [clojure.string :as string]
+            [taoensso.timbre :as timbre
+             :refer (log  trace  debug  info  warn  error  fatal  report
+                          logf tracef debugf infof warnf errorf fatalf reportf
+                          spy get-env log-env)])
   (:import [org.apache.commons.jcs JCS]
            [org.apache.commons.jcs.engine.control CompositeCacheManager]
            [java.io ByteArrayInputStream]
@@ -24,7 +28,7 @@
 (defn initialize-caches
   [config]
   (let [updated-config (string/replace orig-config #"PATH" (:struct-dir config))
-        _ (println updated-config)
+        _ (info updated-config)
         config-stream (ByteArrayInputStream.
                        (.getBytes updated-config StandardCharsets/UTF_8))]
 

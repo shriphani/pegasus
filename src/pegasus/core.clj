@@ -11,7 +11,11 @@
             [pegasus.cache :as cache]
             [pegasus.defaults :as defaults]
             [pegasus.process :as process]
-            [pegasus.queue :as queue]))
+            [pegasus.queue :as queue]
+            [taoensso.timbre :as timbre
+             :refer (log  trace  debug  info  warn  error  fatal  report
+                          logf tracef debugf infof warnf errorf fatalf reportf
+                          spy get-env log-env)]))
 
 (defn alternate-swap!
   "This version returns the swapped out value as well"
@@ -75,7 +79,7 @@
 
 (defn start-crawl
   [init-chan config]
-  (println :starting-crawl)
+  (info :starting-crawl)
   (let [seeds (:seeds config)]
     (async/go
       (doseq [seed seeds]

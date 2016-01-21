@@ -5,7 +5,11 @@
             [durable-queue :refer :all]
             [org.bovinegenius.exploding-fish :as uri]
             [pegasus.cache :as cache]
-            [pegasus.state :as state]))
+            [pegasus.state :as state]
+            [taoensso.timbre :as timbre
+             :refer (log  trace  debug  info  warn  error  fatal  report
+                          logf tracef debugf infof warnf errorf fatalf reportf
+                          spy get-env log-env)]))
 
 (defn handle-robots-url
   [url]
@@ -25,7 +29,7 @@
 
 (defn setup-queue-worker
   [q q-name]
-  (println :setting-up-q-worker)
+  (info :setting-up-q-worker)
   (let [default-delay (:min-delay-ms state/config)
         init-chan (:init-chan state/config)]
     (async/go-loop []
@@ -36,15 +40,15 @@
         (+ default-delay
            (rand-int 1000))))
 
-      (println :default-delay default-delay)
+      (info :default-delay default-delay)
       
       ;; draw a url and pass
       ;; it through the pipeline
-      (println q-name)
+      (info q-name)
       (let [task (take! q q-name 10 nil)]
         (when-not (nil? task)
           (let [url (deref task)]
-            (println :obtained url)
+            (info :obtained url)
             (if (= (uri/path url) "/robots.txt")
               (handle-robots-url url)
               (async/>! init-chan {:input url
@@ -73,7 +77,7 @@
     ;; that robots.txt has been obtained.
     ;; if not, we enqueue robots.txt and start monitoring
     ;; that queue.
-    (println :enqueue url)
+    (info :enqueue url)
     (when-not (.get visited-hosts (uri/host url))
       (enqueue-robots url q visited-hosts)
 
