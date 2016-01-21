@@ -103,7 +103,7 @@
                           defaults/add-location-config     ;; sets up the job directory
                           defaults/add-structs-config      ;; sets up caches
                           defaults/build-pipeline-config   ;; builds a pipeline
-                          defaults/build-queue-config) 
+                          queue/build-queue-config) 
         
         final-config**  (merge defaults/default-options final-config*)
 

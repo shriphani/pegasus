@@ -95,6 +95,7 @@
 
 (defn build-queue-config
   [config]
-  (let [q (queues struct-dir {:slab-size 1024
+  (let [struct-dir (:struct-dir config)
+        q (queues struct-dir {:slab-size 1024
                               :fsync-take? true})]
-    {merge config {:queue q}}))
+    (merge config {:queue q})))
