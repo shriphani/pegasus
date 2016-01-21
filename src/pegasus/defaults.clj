@@ -235,6 +235,15 @@
                          (not-enqueued %))
                    (:extracted obj)))}))
 
+(defn close-wrtr
+  []
+  (let [wrtr (:writer @(:state pegasus.state/config))]
+    (.close wrtr)))
+
+(defn stop-program
+  []
+  (System/exit 0))
+
 (def default-pipeline-config
   {:frontier default-frontier-fn
    :extractor default-extractor-fn
@@ -243,6 +252,7 @@
    :update-state default-update-state
    :test-and-halt default-stop-check
    :filter default-filter
+   :stop-sequence [close-wrtr stop-program]
    :pipeline [[:frontier s/Str 5]
               [:extractor {:url s/Str,
                            :body s/Str,
