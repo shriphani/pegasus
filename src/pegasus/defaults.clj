@@ -162,13 +162,15 @@
     (cache/remove-from-cache src-url to-visit-cache)
     (cache/add-to-cache src-url visited-cache)
     (cache/add-to-cache (uri/host src-url) hosts-visited-cache)
-
-    ;; :state updates
-    (swap! (:state pegasus.state/config)
-           (fn [x]
-             (merge-with + x {:num-visited 1})))
-
     obj))
+
+(defn default-update-stats
+  [obj]
+  ;; :state updates
+  (swap! (:state pegasus.state/config)
+         (fn [x]
+           (merge-with + x {:num-visited 1})))
+  obj)
 
 (defn default-stop-check
   "Stops at 100 documents. This
@@ -180,7 +182,7 @@
   (let [crawl-state (:state pegasus.state/config)
         num-visited (:num-visited @crawl-state)]
     (info :num-visited num-visited)
-    (when (<= 100 num-visited)
+    (when (<= 5 num-visited)
       (let [init-chan (:init-chan pegasus.state/config)
             stop-sequence (:stop-sequence pegasus.state/config)]
         
@@ -247,6 +249,7 @@
    :writer default-writer-fn
    :enqueue queue/enqueue-pipeline
    :update-state default-update-state
+   :update-stats default-update-stats
    :test-and-halt default-stop-check
    :filter default-filter
    :stop-sequence [close-wrtr mark-stop]
@@ -270,6 +273,10 @@
                          :body s/Str
                          :time s/Int
                          :extracted [s/Str]} 5]
+              [:update-stats {:url s/Str
+                              :body s/Str
+                              :time s/Int
+                              :extracted [s/Str]} 5]
               [:test-and-halt s/Any 5]]})
 
 (defn enforce-pipeline-check
