@@ -1,7 +1,5 @@
 (ns pegasus.core
-  (:require [bigml.sketchy.bloom :as bloom]
-            [chime :refer [chime-ch]]
-            [clj-robots.core :as robots]
+  (:require [clj-robots.core :as robots]
             [clj-time.core :as t]
             [clojure.core.async :as async]
             [clojure.java.io :as io]

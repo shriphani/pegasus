@@ -1,7 +1,6 @@
 (ns pegasus.defaults
   "Contains default components"
-  (:require [bigml.sketchy.bloom :as bloom]
-            [clj-http.client :as client]
+  (:require [clj-http.client :as client]
             [clj-robots.core :as robots]
             [clj-time.core :as t]
             [clj-time.coerce :as c]
@@ -68,11 +67,8 @@
 
         clean-uris  (filter identity uris)
         
-        extracted   {:extracted (filter
-                                 (fn [x]
-                                   (= (uri/host x) "blog.shriphani.com"))
-                                 (map #(uri/resolve-uri url %)
-                                      clean-uris))}]
+        extracted   {:extracted (map #(uri/resolve-uri url %)
+                                     clean-uris)}]
     (merge obj extracted)))
 
 (defn default-writer-fn
@@ -106,10 +102,6 @@
              visited)
        (contains? queue
                   (:url obj)))))
-
-(defn default-bloom-update-fn
-  [bloom-filter url]
-  (bloom/insert bloom-filter url))
 
 (def default-location-config
   {:job-dir nil
@@ -201,8 +193,8 @@
         ;; any destructors needed are placed
         ;; here during the crawl phase
         (when stop-sequence
-         (doseq [stop-fn (stop-sequence)]
-           (stop-fn)))))))
+          (doseq [stop-fn stop-sequence]
+            (stop-fn)))))))
 
 (defn robots-filter
   [a-uri]
