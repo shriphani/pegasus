@@ -17,7 +17,8 @@
             [taoensso.timbre :as timbre
              :refer (log  trace  debug  info  warn  error  fatal  report
                           logf tracef debugf infof warnf errorf fatalf reportf
-                          spy get-env log-env)])
+                          spy get-env log-env)]
+            [taoensso.timbre.appenders.core :as appenders])
   (:import [clojure.lang PersistentQueue]
            [java.io StringReader]))
 
@@ -75,19 +76,17 @@
   "The default writer pretty prints the input object
   to a corpus file."
   [obj]
-  (locking (:state pegasus.state/config)
-   (let [wrtr (:writer @(:state pegasus.state/config))]
+  (let [wrtr (:writer @(:state pegasus.state/config))]
     
-     ;; open the writer if not already opened.
-     (when (nil? wrtr)
-       (swap! (:state pegasus.state/config)
-              (fn [x]
-                (merge-with + x {:writer (io/writer
-                                          (io/file (:corpus-dir pegasus.state/config)
-                                                   "corpus.clj"))}))))))
-    
-    ;; now try again :) - ugly code I know :)
-
+    ;; open the writer if not already opened.
+    (when (nil? wrtr)
+      (swap! (:state pegasus.state/config)
+             (fn [x]
+               (merge-with + x {:writer (io/writer
+                                         (io/file (:corpus-dir pegasus.state/config)
+                                                  "corpus.clj"))})))))
+  
+   ;; now try again :) - ugly code I know :)
   (let [wrtr (:writer @(:state pegasus.state/config))]
     
     (.write wrtr (str (clojure.pprint/write obj :stream nil)
@@ -236,9 +235,11 @@
   (let [wrtr (:writer @(:state pegasus.state/config))]
     (.close wrtr)))
 
-(defn stop-program
+(defn mark-stop
   []
-  (System/exit 0))
+  (swap! (:state pegasus.state/config)
+         (fn [x]
+           (merge x {:stop? true}))))
 
 (def default-pipeline-config
   {:frontier default-frontier-fn
@@ -248,7 +249,7 @@
    :update-state default-update-state
    :test-and-halt default-stop-check
    :filter default-filter
-   :stop-sequence [close-wrtr stop-program]
+   :stop-sequence [close-wrtr mark-stop]
    :pipeline [[:frontier s/Str 5]
               [:extractor {:url s/Str,
                            :body s/Str,
@@ -287,6 +288,16 @@
     (enforce-pipeline-check new-config)
 
     new-config))
+
+(defn config-logs
+  [config]
+  (let [logs-dir (:logs-dir config)]
+    (timbre/merge-config!
+     {:appenders
+      {:spit (appenders/spit-appender
+              {:fname (.getAbsolutePath
+                       (io/file logs-dir
+                                "crawl.log"))})}})))
 
 (def default-options {:min-delay-ms 2000
                       :state (atom {:num-visited 0})})

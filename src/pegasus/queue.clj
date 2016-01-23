@@ -55,7 +55,9 @@
                                    :config state/config}))
             (complete! task))))
       
-      (recur))))
+      (when-not (:stop?
+                 @(:state state/config))
+       (recur)))))
 
 (defn enqueue-robots
   [a-url q visited-hosts-cache]

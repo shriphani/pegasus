@@ -112,6 +112,8 @@
         init-chan (process/initialize-pipeline final-config**)
 
         final-config (merge final-config** {:init-chan init-chan})]
+
+    (defaults/config-logs final-config)
     
     (start-crawl init-chan final-config)
     final-config))
