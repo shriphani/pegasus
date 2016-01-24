@@ -65,13 +65,13 @@
                                  :job-dir "/tmp/test-crawl"
                                  :corpus-size 5})]
         (loop []
-
+          
           (let [stop (:stop?
                       @(:state final-config))]
 
-            (when stop
+            (if stop
               (is
                (= (:num-visited
                    @(:state final-config))
-                  5)))
-            (recur)))))))
+                  5))
+              (recur))))))))
