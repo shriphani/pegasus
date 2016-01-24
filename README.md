@@ -18,6 +18,10 @@ Leiningen dependencies:
 
 A few example crawls:
 
+This one crawls 20 docs from my blog (http://blog.shriphani.com).
+
+URLs are extracted using `enlive` selectors.
+
 ```clojure
 (defn crawl-sp-blog
   []
@@ -64,6 +68,8 @@ A few example crawls:
           :job-dir "/tmp/sp-blog-corpus"})) ;; store all crawl data in /tmp/sp-blog-corpus/
 
 ```
+
+This one uses XPath queries.
 
 Using XPaths:
 
