@@ -172,6 +172,12 @@
            (merge-with + x {:num-visited 1})))
   obj)
 
+(defn zero-enqueued?
+  [q]
+  (info :number-enqueued (queue/global-to-visit q))
+  (zero?
+   (queue/global-to-visit q)))
+
 (defn default-stop-check
   "Stops at 100 documents. This
   function is part of the crawl
@@ -181,9 +187,12 @@
   [& _]
   (let [crawl-state (:state pegasus.state/config)
         num-visited (:num-visited @crawl-state)
-        corpus-size (:corpus-size pegasus.state/config)]
+        corpus-size (:corpus-size pegasus.state/config)
+
+        q (:queue pegasus.state/config)]
     (info :num-visited num-visited)
-    (when (<= corpus-size num-visited)
+    (when (or (<= corpus-size num-visited)
+              (zero-enqueued? (:queue pegasus.state/config)))
       (let [init-chan (:init-chan pegasus.state/config)
             stop-sequence (:stop-sequence pegasus.state/config)]
         
