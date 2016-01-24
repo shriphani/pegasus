@@ -2,7 +2,7 @@
 
 <img src="pegasus_logo_200.png" />
 
-[![Circle CI](https://circleci.com/gh/shriphani/pegasus.svg?style=svg)](https://circleci.com/gh/shriphani/pegasus)
+[![Circle CI](https://circleci.com/gh/shriphani/pegasus.svg?style=svg&circle-token=351e60b226583e6e24fece5d35f03fbb4f50d3bc)](https://circleci.com/gh/shriphani/pegasus)
 
 Pegasus is a high-performance, multithreaded, crawler.
 
