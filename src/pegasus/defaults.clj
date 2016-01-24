@@ -180,9 +180,10 @@
   the crawl-state."
   [& _]
   (let [crawl-state (:state pegasus.state/config)
-        num-visited (:num-visited @crawl-state)]
+        num-visited (:num-visited @crawl-state)
+        corpus-size (:corpus-size pegasus.state/config)]
     (info :num-visited num-visited)
-    (when (<= 5 num-visited)
+    (when (<= corpus-size num-visited)
       (let [init-chan (:init-chan pegasus.state/config)
             stop-sequence (:stop-sequence pegasus.state/config)]
         
@@ -307,4 +308,5 @@
                                 "crawl.log"))})}})))
 
 (def default-options {:min-delay-ms 2000
-                      :state (atom {:num-visited 0})})
+                      :state (atom {:num-visited 0})
+                      :corpus-size 100})
