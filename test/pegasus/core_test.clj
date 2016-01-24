@@ -1,8 +1,11 @@
 (ns pegasus.core-test
   (:require [clj-http.client :as client]
+            [clojure.java.io :as io]
             [clojure.test :refer :all]
+            [me.raynes.fs :as fs]
             [pegasus.core :refer :all]
-            [pegasus.defaults :as defaults]))
+            [pegasus.defaults :as defaults]
+            [pegasus.utils :as utils]))
 
 (def mock-bodies
   {"http://foo.com/1"
@@ -55,15 +58,40 @@
  </body>
 </html>"}})
 
-(deftest test-uniques
-  (testing "Does the crawl grab unique URIs only?"
+(def default-test-dir "/tmp/test-crawl")
+
+(defn remove-dir-fixture
+  [f]
+  (println "Running remove-dir fixture")
+  (when (fs/exists? default-test-dir)
+    (fs/delete-dir default-test-dir))
+  (f)
+  (when (fs/exists? default-test-dir)
+    (fs/delete-dir default-test-dir)))
+
+(use-fixtures :each remove-dir-fixture)
+
+(defn all-unique?
+  [corpus-dir]
+  (let [corpus-file (io/file corpus-dir "corpus.clj")]
+    (with-open [rdr (utils/corpus-reader corpus-file)]
+      (let [urls
+            (doall
+             (map :url
+                  (utils/records rdr)))]
+        (= (count (set urls))
+           (count urls))))))
+
+(deftest test-stop-unique
+  (testing "Does the crawl grab the correct number of docs? Are they unique?"
     (with-redefs [defaults/get-request (fn [x y]
                                          (get mock-bodies x))]
       (let [final-config (crawl {:seeds ["http://foo.com/1"]
                                  :impolite? true
                                  :user-agent "Hello!!!"
-                                 :job-dir "/tmp/test-crawl"
-                                 :corpus-size 5})]
+                                 :job-dir default-test-dir
+                                 :corpus-size 5
+                                 :min-delay-ms 0})]
         (loop []
           
           (let [stop (:stop?
@@ -74,4 +102,23 @@
                (= (:num-visited
                    @(:state final-config))
                   5))
+              (recur)))))))
+
+  (testing "Does the crawl grab the correct number of docs? Are they unique?"
+    (with-redefs [defaults/get-request (fn [x y]
+                                         (get mock-bodies x))]
+      (let [final-config (crawl {:seeds ["http://foo.com/1"]
+                                 :impolite? true
+                                 :user-agent "Hello!!!"
+                                 :job-dir default-test-dir
+                                 :corpus-size 5
+                                 :min-delay-ms 0})]
+        (loop []
+          
+          (let [stop (:stop?
+                      @(:state final-config))]
+
+            (if stop
+              (is
+               (all-unique? (io/file (:corpus-dir final-config))))
               (recur))))))))
