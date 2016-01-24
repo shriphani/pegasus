@@ -105,3 +105,13 @@
         q (queues struct-dir {:slab-size 1024
                               :fsync-take? true})]
     (merge config {:queue q})))
+
+(defn global-to-visit
+  "How many items are enqueued?"
+  [q]
+  (let [global-stats (stats q)]
+    (reduce
+     (fn [n [name named-q-stats]]
+       (+ n (:enqueued named-q-stats)))
+     0
+     global-stats)))
