@@ -9,6 +9,7 @@ Pegasus is a highly-modular, durable and scalable crawler for clojure.
 Parallelism is achieved with [`core.async`](https://clojure.github.io/core.async/).
 Durability is achieved with [`durable-queue`](https://github.com/Factual/durable-queue) and [JCS](https://commons.apache.org/proper/commons-jcs/).
 
+A blog post on how pegasus works: [[link]](http://blog.shriphani.com/2016/01/25/pegasus-a-modular-durable-web-crawler-for-clojure/)
 
 ## Usage
 
