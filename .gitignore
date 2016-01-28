@@ -11,6 +11,8 @@ pom.xml.asc
 .hg/
 *~*
 *#*
+/dev-resources
+/.idea
 
 # no logo files
 *.sketch
