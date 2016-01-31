@@ -24,6 +24,12 @@ This one crawls 20 docs from my blog (http://blog.shriphani.com).
 URLs are extracted using `enlive` selectors.
 
 ```clojure
+(ns your.namespace
+  (:require [org.bovinegenius.exploding-fish :as uri]
+            [net.cgrand.enlive-html :as html]
+            [pegasus.core :refer [crawl]])
+  (:import (java.io StringReader)))
+
 (defn crawl-sp-blog
   []
   (crawl {:seeds ["http://blog.shriphani.com"]
@@ -68,13 +74,22 @@ URLs are extracted using `enlive` selectors.
           :corpus-size 20 ;; crawl 20 documents
           :job-dir "/tmp/sp-blog-corpus"})) ;; store all crawl data in /tmp/sp-blog-corpus/
 
+# start crawling
+(crawl-sp-blog)
+
 ```
 
-This one uses XPath queries.
+This one uses XPath queries courtesy of `clj-xpath`.
 
 Using XPaths:
 
 ```clojure
+(ns your.namespace
+  (:require [org.bovinegenius.exploding-fish :as uri]
+            [net.cgrand.enlive-html :as html]
+            [pegasus.core :refer [crawl]]
+            [clj-xpath.core :refer [$x $x:text xml->doc]]))
+            
 (defn crawl-sp-blog-xpaths
   []
     (crawl {:seeds ["http://blog.shriphani.com/feeds/all.rss.xml"]
@@ -103,6 +118,9 @@ Using XPaths:
           
           :corpus-size 20 ;; crawl 20 documents
           :job-dir "/tmp/sp-blog-corpus"}))
+
+# start crawling
+(crawl-sp-blog-xpaths)          
 ```
 
 ## License

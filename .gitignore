@@ -11,6 +11,9 @@ pom.xml.asc
 .hg/
 *~*
 *#*
+/dev-resources
+/.idea
+pegasus.iml
 
 # no logo files
 *.sketch
