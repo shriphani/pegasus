@@ -58,18 +58,16 @@
  </body>
 </html>"}})
 
-(def default-test-dir "/tmp/test-crawl")
+(def ^:dynamic *current-dir* nil)
 
-(defn remove-dir-fixture
+(defn job-dir-create-delete-fixture
   [f]
-  (println "Running remove-dir fixture")
-  (when (fs/exists? default-test-dir)
-    (fs/delete-dir default-test-dir))
-  (f)
-  (when (fs/exists? default-test-dir)
-    (fs/delete-dir default-test-dir)))
+  (let [test-dir (fs/temp-dir "crawl")]
+    (binding [*current-dir* test-dir]
+      (f))
+    (fs/delete-dir test-dir)))
 
-(use-fixtures :each remove-dir-fixture)
+(use-fixtures :each job-dir-create-delete-fixture)
 
 (defn all-unique?
   [corpus-dir]
@@ -89,7 +87,7 @@
       (let [final-config (crawl {:seeds ["http://foo.com/1"]
                                  :impolite? true
                                  :user-agent "Hello!!!"
-                                 :job-dir default-test-dir
+                                 :job-dir *current-dir*
                                  :corpus-size 5
                                  :min-delay-ms 0})]
         (loop []
@@ -110,7 +108,7 @@
       (let [final-config (crawl {:seeds ["http://foo.com/1"]
                                  :impolite? true
                                  :user-agent "Hello!!!"
-                                 :job-dir default-test-dir
+                                 :job-dir *current-dir*
                                  :corpus-size 5
                                  :min-delay-ms 0})]
         (loop []
