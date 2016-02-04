@@ -1,6 +1,6 @@
 # pegasus
 
-[![Circle CI](https://circleci.com/gh/shriphani/pegasus.svg?style=svg&circle-token=351e60b226583e6e24fece5d35f03fbb4f50d3bc)](https://circleci.com/gh/shriphani/pegasus)
+[![Circle CI](https://circleci.com/gh/shriphani/pegasus.svg?style=shield&circle-token=351e60b226583e6e24fece5d35f03fbb4f50d3bc)](https://circleci.com/gh/shriphani/pegasus)
 
 <img src="pegasus_logo.png" align="middle" />
 
