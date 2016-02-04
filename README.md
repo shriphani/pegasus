@@ -74,7 +74,7 @@ URLs are extracted using `enlive` selectors.
           :corpus-size 20 ;; crawl 20 documents
           :job-dir "/tmp/sp-blog-corpus"})) ;; store all crawl data in /tmp/sp-blog-corpus/
 
-# start crawling
+;; start crawling
 (crawl-sp-blog)
 
 ```
@@ -119,7 +119,7 @@ Using XPaths:
           :corpus-size 20 ;; crawl 20 documents
           :job-dir "/tmp/sp-blog-corpus"}))
 
-# start crawling
+;; start crawling
 (crawl-sp-blog-xpaths)          
 ```
 
