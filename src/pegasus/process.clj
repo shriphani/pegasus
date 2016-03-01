@@ -38,7 +38,7 @@
                                                       ((get crawl-config component))))})
                                 (catch Exception e
                                   (do (info component)
-                                      (trace e)
+                                      (error e)
                                       (merge % {:input nil})))))
                         (filter :input))
                   parallelism))
