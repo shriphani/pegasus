@@ -20,7 +20,8 @@
                           spy get-env log-env)]
             [taoensso.timbre.appenders.core :as appenders])
   (:import [clojure.lang PersistentQueue]
-           [java.io StringReader]))
+           [java.io BufferedWriter StringReader FileOutputStream OutputStreamWriter]
+           [java.util.zip GZIPOutputStream]))
 
 (defn get-request
   [url user-agent]
@@ -74,23 +75,38 @@
 
 (defn default-writer-fn
   "The default writer pretty prints the input object
-  to a corpus file."
+  to a gzipped corpus file."
   [obj]
-  (let [wrtr (:writer @(:state pegasus.state/config))]
+  (let [file-obj (-> pegasus.state/config
+                     :corpus-dir
+                     (io/file "corpus.clj.gz"))
+
+        wrtr (-> file-obj
+                 io/output-stream
+                 (GZIPOutputStream.)
+                 (OutputStreamWriter. "UTF-8")
+                 (BufferedWriter.))]
     
     ;; open the writer if not already opened.
-    (when (nil? wrtr)
+    (when (-> pegasus.state/config
+              :state
+              deref
+              :writer
+              nil?)
       (swap! (:state pegasus.state/config)
-             (fn [x]
-               (merge-with + x {:writer (io/writer
-                                         (io/file (:corpus-dir pegasus.state/config)
-                                                  "corpus.clj"))})))))
+             merge
+             {:writer wrtr})))
   
-   ;; now try again :) - ugly code I know :)
-  (let [wrtr (:writer @(:state pegasus.state/config))]
+  ;; now try again :) - ugly code I know :)
+  (let [wrtr (-> pegasus.state/config
+                 :state
+                 deref
+                 :writer)]
+
+    (clojure.pprint/pprint pegasus.state/config)
     
-    (.write wrtr (str (clojure.pprint/write obj :stream nil)
-                      "\n"))
+    (.append wrtr (str (clojure.pprint/write obj :stream nil)
+                       "\n"))
     (.flush wrtr))
   obj)
 
