@@ -1,6 +1,7 @@
 (ns pegasus.utils
   "General utils"
-  (:require [clojure.java.io :as io])
+  (:require [clojure.java.io :as io]
+            [pegasus.state :as state])
   (:import [java.io FileInputStream InputStreamReader PushbackReader]
            [java.util.zip GZIPInputStream]))
 
@@ -21,3 +22,9 @@
       (GZIPInputStream.)
       (InputStreamReader. "UTF-8")
       (PushbackReader.)))
+
+(defmacro with-config
+  ""
+  [config & body]
+  `(binding [pegasus.state/config ~config]
+     ~@body))

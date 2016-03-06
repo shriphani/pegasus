@@ -6,14 +6,12 @@
   and writes to an out-channel (not necessarily)"
   (:require [clojure.core.async :as async]
             [clojure.repl :refer [pst]]
-            [pegasus.state]
+            [pegasus.utils :refer [with-config]]
             [schema.core :as s]
             [taoensso.timbre :as timbre
              :refer (log  trace  debug  info  warn  error  fatal  report
                           logf tracef debugf infof warnf errorf fatalf reportf
                           spy get-env log-env)]))
-
-(declare ^:dynamic config)
 
 (defn add-transducer
   [in xf parallelism]
@@ -30,8 +28,7 @@
   (add-transducer in-chan
                   (comp (map #(try
                                 (merge %
-                                       {:input (binding [pegasus.state/config (:config %)
-                                                         config (:config %)]
+                                       {:input (with-config (:config %)
                                                  (->> %
                                                       :input
                                                       (s/validate process-schema)
