@@ -71,7 +71,7 @@
 
 (defn all-unique?
   [corpus-dir]
-  (let [corpus-file (io/file corpus-dir "corpus.clj")]
+  (let [corpus-file (io/file corpus-dir "corpus.clj.gz")]
     (with-open [rdr (utils/corpus-reader corpus-file)]
       (let [urls
             (doall

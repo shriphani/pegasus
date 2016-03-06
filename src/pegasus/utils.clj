@@ -1,7 +1,8 @@
 (ns pegasus.utils
   "General utils"
   (:require [clojure.java.io :as io])
-  (:import [java.io PushbackReader]))
+  (:import [java.io FileInputStream InputStreamReader PushbackReader]
+           [java.util.zip GZIPInputStream]))
 
 (defn records
   [a-corpus-reader]
@@ -16,5 +17,7 @@
   "A reader that supplies records from a corpus"
   [filename]
   (-> filename
-      io/reader
+      (FileInputStream.)
+      (GZIPInputStream.)
+      (InputStreamReader. "UTF-8")
       (PushbackReader.)))

@@ -83,9 +83,7 @@
 
         wrtr (-> file-obj
                  io/output-stream
-                 (GZIPOutputStream.)
-                 (OutputStreamWriter. "UTF-8")
-                 (BufferedWriter.))]
+                 (GZIPOutputStream.))]
     
     ;; open the writer if not already opened.
     (when (-> pegasus.state/config
@@ -98,16 +96,18 @@
              {:writer wrtr})))
   
   ;; now try again :) - ugly code I know :)
-  (let [wrtr (-> pegasus.state/config
-                 :state
-                 deref
-                 :writer)]
+  (let [gzip-out (-> pegasus.state/config
+                     :state
+                     deref
+                     :writer)
 
-    (clojure.pprint/pprint pegasus.state/config)
-    
-    (.append wrtr (str (clojure.pprint/write obj :stream nil)
-                       "\n"))
-    (.flush wrtr))
+        wrtr (-> gzip-out
+                 (OutputStreamWriter. "UTF-8"))]
+
+    (.write wrtr (str
+                  (clojure.pprint/write obj :stream nil)
+                  "\n"))
+    (.finish gzip-out))
   obj)
 
 (defn default-visited-check
