@@ -1,4 +1,4 @@
-(defproject pegasus "0.2.1"
+(defproject pegasus "0.2.2"
   :description "A scaleable production-ready crawler in clojure"
   :url "http://github.com/shriphani/pegasus"
   :license {:name "Eclipse Public License"
@@ -17,5 +17,4 @@
                  [org.clojure/core.async "0.2.374"]
                  [org.clojure/tools.namespace "0.2.11"]
                  [prismatic/schema "1.0.4"]]
-  :plugins [[lein-ancient "0.6.8"]]
-  )
+  :plugins [[lein-ancient "0.6.8"]])
