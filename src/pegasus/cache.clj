@@ -1,49 +1,62 @@
 (ns pegasus.cache
-  "Clojure wrapper around JCS"
-  (:require [clojure.java.io :as io]
+  "A simple cache using LMDB"
+  (:require [clj-lmdb.core :as lmdb]
+            [clojure.java.io :as io]
             [clojure.string :as string]
+            [pegasus.utils :as utils]
             [taoensso.timbre :as timbre
-             :refer (log  trace  debug  info  warn  error  fatal  report
-                          logf tracef debugf infof warnf errorf fatalf reportf
-                          spy get-env log-env)])
-  (:import [org.apache.commons.jcs JCS]
-           [org.apache.commons.jcs.engine.control CompositeCacheManager]
-           [java.io ByteArrayInputStream]
-           [java.nio.charset StandardCharsets]
-           [java.util Properties]))
-
-(def props (Properties.))
-(def orig-config (-> "cache.ccf"
-                     io/resource
-                     slurp))
-
-(defn remove-from-cache
-  [item cache]
-  (.remove cache item))
+             :refer (log debug info)]))
 
 (defn add-to-cache
   [item cache]
-  (.put cache item "1"))
+  (lmdb/put! cache
+             item
+             "1"))
+
+(defn remove-from-cache
+  [item cache]
+  (lmdb/delete! cache
+                item))
+
+(defn create-cache-dirs
+  [cache-dir]
+  (utils/mkdir-if-not-exists
+   (str cache-dir
+        "/visited"))
+  (utils/mkdir-if-not-exists
+   (str cache-dir
+        "/to-visit"))
+  (utils/mkdir-if-not-exists
+   (str cache-dir
+        "/robots-txt"))
+  (utils/mkdir-if-not-exists
+   (str cache-dir
+        "/hosts-visited")))
 
 (defn initialize-caches
   [config]
-  (let [updated-config (string/replace orig-config #"PATH" (:struct-dir config))
-        _ (info updated-config)
-        config-stream (ByteArrayInputStream.
-                       (.getBytes updated-config StandardCharsets/UTF_8))]
 
-;    (.setDiskPath visited-attrs (:struct-dir config))
-                                        ;    (.setDiskPath to-visit-attrs (:struct-dir config))
-    (.load props config-stream)
-    (.configure (CompositeCacheManager/getUnconfiguredInstance)
-                props)
+  ;; create cache directories
+  (-> config
+      :struct-dir
+      create-cache-dirs)
+  
+  (let [visited-dir  (str (:struct-dir config)
+                          "/visited")
+        to-visit-dir (str (:struct-dir config)
+                          "/to-visit")
+        robots-dir   (str (:struct-dir config)
+                          "/robots-txt")
+        hosts-dir    (str (:struct-dir config)
+                          "/hosts-visited")
 
-    (let [visited-cache (JCS/getInstance "visited")
-          to-visit-cache (JCS/getInstance "tovisit")
-          robots-cache (JCS/getInstance "robotstxt")
-          hosts-visited-cache (JCS/getInstance "hostsvisited")]
-      {:to-visit-cache to-visit-cache
-       :visited-cache visited-cache
-       :hosts-visited-cache hosts-visited-cache
-       :robots-cache robots-cache})))
+        visited-cache  (lmdb/make-db visited-dir)
+        to-visit-cache (lmdb/make-db to-visit-dir)
+        robots-cache   (lmdb/make-db robots-dir)
+        hosts-cache    (lmdb/make-db hosts-dir)]
+    
+    {:to-visit-cache to-visit-cache
+     :visited-cache visited-cache
+     :hosts-visited-cache hosts-cache
+     :robots-cache robots-cache}))
 
