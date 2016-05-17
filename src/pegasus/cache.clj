@@ -1,6 +1,6 @@
 (ns pegasus.cache
   "A simple cache using LMDB"
-  (:require [clj-lmdb.core :as lmdb]
+  (:require [clj-lmdb.simple :as lmdb]
             [clojure.java.io :as io]
             [clojure.string :as string]
             [pegasus.utils :as utils]
@@ -20,18 +20,7 @@
 
 (defn create-cache-dirs
   [cache-dir]
-  (utils/mkdir-if-not-exists
-   (str cache-dir
-        "/visited"))
-  (utils/mkdir-if-not-exists
-   (str cache-dir
-        "/to-visit"))
-  (utils/mkdir-if-not-exists
-   (str cache-dir
-        "/robots-txt"))
-  (utils/mkdir-if-not-exists
-   (str cache-dir
-        "/hosts-visited")))
+  (utils/mkdir-if-not-exists cache-dir))
 
 (defn initialize-caches
   [config]
@@ -41,19 +30,14 @@
       :struct-dir
       create-cache-dirs)
   
-  (let [visited-dir  (str (:struct-dir config)
-                          "/visited")
-        to-visit-dir (str (:struct-dir config)
-                          "/to-visit")
-        robots-dir   (str (:struct-dir config)
-                          "/robots-txt")
-        hosts-dir    (str (:struct-dir config)
-                          "/hosts-visited")
-
-        visited-cache  (lmdb/make-db visited-dir)
-        to-visit-cache (lmdb/make-db to-visit-dir)
-        robots-cache   (lmdb/make-db robots-dir)
-        hosts-cache    (lmdb/make-db hosts-dir)]
+  (let [visited-cache  (lmdb/make-named-db (:struct-dir config)
+                                           "visited")
+        to-visit-cache (lmdb/make-named-db (:struct-dir config)
+                                           "to-visit")
+        robots-cache   (lmdb/make-named-db (:struct-dir config)
+                                           "robots")
+        hosts-cache    (lmdb/make-named-db (:struct-dir config)
+                                           "hosts")]
     
     {:to-visit-cache to-visit-cache
      :visited-cache visited-cache
