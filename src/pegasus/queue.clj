@@ -4,7 +4,7 @@
             [clojure.core.async :as async]
             [durable-queue :refer :all]
             [org.bovinegenius.exploding-fish :as uri]
-            [pegasus.cache :as cache]
+            [clojure.core.cache :as cache]
             [pegasus.state :as state]
             [taoensso.timbre :as timbre
              :refer (log  trace  debug  info  warn  error  fatal  report
@@ -21,11 +21,19 @@
                                        :headers
                                        {"User-Agent"
                                         (:user-agent state/config)}}))
-                         (catch Exception e nil))]
+                         (catch Exception e nil))
+
+        robots-cache (:robots-cache state/config)
+        
+        host (uri/host url)]
     
     (if robots-payload
-      (cache/add-to-cache robots-payload (:robots-cache state/config))
-      (cache/add-to-cache "User-Agent *\nAllow /" (:robots-cache state/config)))))
+      (cache/miss robots-cache
+                  host
+                  robots-payload)
+      (cache/miss robots-cache
+                  host
+                  "User-Agent *\nAllow /"))))
 
 (defn setup-queue-worker
   [q q-name]
@@ -64,8 +72,9 @@
   (let [q-name (-> a-url uri/host keyword)
         robots-url (uri/resolve-uri a-url "/robots.txt")]
     (put! q q-name robots-url)
-    (cache/add-to-cache (uri/host a-url)
-                        visited-hosts-cache)))
+    (cache/miss visited-hosts-cache
+                (uri/host a-url)
+                "1")))
 
 (defn enqueue-url
   [url]
@@ -80,14 +89,19 @@
     ;; if not, we enqueue robots.txt and start monitoring
     ;; that queue.
     (info :enqueue url)
-    (when-not (.get visited-hosts (uri/host url))
-      (enqueue-robots url q visited-hosts)
-
-      (setup-queue-worker q q-name))
+    (when-not (cache/lookup visited-hosts
+                            (uri/host url))
+      (do (debug :here? url)
+          (enqueue-robots url q visited-hosts))
+      
+      (do (debug :here-2? url)
+          (setup-queue-worker q q-name)))
     
     ;; insert this URL.
     (put! q q-name url)
-    (cache/add-to-cache url to-visit-cache)))
+    (cache/miss to-visit-cache
+                url
+                "1")))
 
 (defn enqueue-pipeline
   "A pipeline component that consumes urls

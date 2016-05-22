@@ -2,11 +2,11 @@
   (:require [clj-robots.core :as robots]
             [clj-time.core :as t]
             [clojure.core.async :as async]
+            [clojure.core.cache :as cache]
             [clojure.java.io :as io]
             [clojure.string :as string]
             [durable-queue :refer :all]
             [org.bovinegenius.exploding-fish :as uri]
-            [pegasus.cache :as cache]
             [pegasus.defaults :as defaults]
             [pegasus.process :as process]
             [pegasus.queue :as queue]
@@ -34,11 +34,6 @@
          t/seconds
          (iterate #(+ min-delay %) min-delay))))
 
-(defn setup-caches
-  "Sets up ehcache."
-  [config]
-  (cache/initialize-caches config))
-
 (defn remove-fragments
   [a-uri]
   (uri/fragment a-uri nil))
@@ -53,8 +48,10 @@
         no-fragments (map remove-fragments uris)
         unseen (filter
                 (fn [a-uri]
-                  (and (nil? (.get to-visit-cache a-uri))
-                       (nil? (.get visited-cache a-uri))))
+                  (and (nil? (cache/lookup to-visit-cache
+                                           a-uri))
+                       (nil? (cache/lookup visited-cache
+                                           a-uri))))
                 no-fragments)]
     (distinct unseen)))
 
@@ -65,8 +62,8 @@
                  :body)
         host (uri/host robots-url)]
     (if body
-      (.put robots-cache host body)
-      (.put robots-cache host "User-agent: *\nAllow: /"))))
+      (cache/miss robots-cache host body)
+      (cache/miss robots-cache host "User-agent: *\nAllow: /"))))
 
 (defn enforce-politeness
   [config]
