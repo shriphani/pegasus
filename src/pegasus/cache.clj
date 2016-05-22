@@ -30,7 +30,9 @@
     ;; create cache directories
     (create-cache-dirs cache-dir)
     
-    {:to-visit-cache      to-visit-cache
-     :visited-cache       visited-cache
-     :hosts-visited-cache hosts-cache
-     :robots-cache        robots-cache}))
+    (merge
+     config
+     {:to-visit-cache      to-visit-cache
+      :visited-cache       visited-cache
+      :hosts-visited-cache hosts-cache
+      :robots-cache        robots-cache})))
