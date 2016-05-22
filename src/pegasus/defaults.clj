@@ -7,11 +7,12 @@
             [clojure.core.async :as async]
             [clojure.java.io :as io]
             [clojure.pprint :refer [pprint]]
+            [clojure.core.cache :as cache]
             [me.raynes.fs :as fs]
             [net.cgrand.enlive-html :as html]
             [org.bovinegenius.exploding-fish :as uri]
-            [pegasus.cache :as cache]
             [pegasus.queue :as queue]
+            [pegasus.cache :as pc]
             [pegasus.state]
             [schema.core :as s]
             [taoensso.timbre :as timbre
@@ -160,7 +161,7 @@
 
 (defn add-structs-config
   [user-config]
-  (let [cache-config (cache/initialize-caches user-config)]
+  (let [cache-config (pc/initialize-caches user-config)]
     (merge user-config cache-config)))
 
 (defn default-update-state
@@ -168,16 +169,24 @@
   [obj]
   (let [src-url (:url obj)
 
-        to-visit-cache (:to-visit-cache pegasus.state/config)
-        visited-cache (:visited-cache pegasus.state/config)
+        to-visit-cache      (:to-visit-cache pegasus.state/config)
+        visited-cache       (:visited-cache pegasus.state/config)
         hosts-visited-cache (:hosts-visited-cache pegasus.state/config)
 
         extracted-uris (:extracted obj)]
 
     ;; cache updates
-    (cache/remove-from-cache src-url to-visit-cache)
-    (cache/add-to-cache src-url visited-cache)
-    (cache/add-to-cache (uri/host src-url) hosts-visited-cache)
+    (cache/miss to-visit-cache
+                src-url
+                "1")
+    (cache/miss visited-cache
+                src-url
+                "1")
+    (cache/miss hosts-visited-cache
+                (uri/host src-url)
+                "1")
+
+    ;; return the object
     obj))
 
 (defn default-update-stats
@@ -227,7 +236,8 @@
   [a-uri]
   (let [host (uri/host a-uri)
         robots-cache (:robots-cache pegasus.state/config)
-        robots-txt (.get robots-cache host)
+        robots-txt (cache/lookup robots-cache
+                                 host)
         parsed (robots/parse robots-txt)
         impolite? (:impolite? pegasus.state/config)]
     (or impolite?
@@ -239,12 +249,16 @@
 (defn not-visited
   [a-uri]
   (let [visited-cache (:visited-cache pegasus.state/config)]
-    (not (.get visited-cache a-uri))))
+    (-> visited-cache
+        (cache/lookup a-uri)
+        not)))
 
 (defn not-enqueued
   [a-uri]
   (let [to-visit-cache (:to-visit-cache pegasus.state/config)]
-    (not (.get to-visit-cache a-uri))))
+    (-> to-visit-cache
+        (cache/lookup a-uri)
+        not)))
 
 (defn default-filter
   "By default, we ignore robots.txt urls"
