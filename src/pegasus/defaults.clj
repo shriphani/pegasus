@@ -78,20 +78,19 @@
   "The default writer pretty prints the input object
   to a gzipped corpus file."
   [obj]
-  (let [file-obj (-> pegasus.state/config
-                     :corpus-dir
-                     (io/file "corpus.clj.gz"))
-
-        wrtr (-> file-obj
-                 io/output-stream
-                 (GZIPOutputStream.))]
-    
-    ;; open the writer if not already opened.
-    (when (-> pegasus.state/config
-              :state
-              deref
-              :writer
-              nil?)
+  (when (-> pegasus.state/config
+            :state
+            deref
+            :writer
+            nil?)
+    (let [file-obj (-> pegasus.state/config
+                       :corpus-dir
+                       (io/file "corpus.clj.gz"))
+          wrtr (-> file-obj
+                   io/output-stream
+                   (GZIPOutputStream.)
+                   (OutputStreamWriter. "UTF-8")
+                   agent)]
       (swap! (:state pegasus.state/config)
              merge
              {:writer wrtr})))
@@ -102,13 +101,15 @@
                      deref
                      :writer)
 
-        wrtr (-> gzip-out
-                 (OutputStreamWriter. "UTF-8"))]
-
-    (.write wrtr (str
-                  (clojure.pprint/write obj :stream nil)
-                  "\n"))
-    (.finish gzip-out))
+        write-fn (fn [wrtr s]
+                   (.write wrtr
+                           s)
+                   wrtr)]
+    (send gzip-out
+          write-fn
+          (str
+           (clojure.pprint/write obj :stream nil)
+           "\n")))
   obj)
 
 (defn default-visited-check
@@ -275,7 +276,9 @@
 (defn close-wrtr
   []
   (let [wrtr (:writer @(:state pegasus.state/config))]
-    (.close wrtr)))
+    (-> wrtr
+        deref
+        (.close))))
 
 (defn mark-stop
   []
