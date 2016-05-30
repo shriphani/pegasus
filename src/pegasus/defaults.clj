@@ -105,11 +105,11 @@
                    (.write wrtr
                            s)
                    wrtr)]
-    (send gzip-out
-          write-fn
-          (str
-           (clojure.pprint/write obj :stream nil)
-           "\n")))
+    (send-off gzip-out
+              write-fn
+              (str
+               (clojure.pprint/write obj :stream nil)
+               "\n")))
   obj)
 
 (defn default-visited-check
