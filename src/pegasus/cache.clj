@@ -15,12 +15,21 @@
 (defn initialize-caches
   [config]
 
-  (let [cache-dir (:struct-dir config)
+  (let [two-tb    2147483648
+        cache-dir (:struct-dir config)
         
-        visited-db  (lmdb/make-named-db cache-dir "visited")
-        to-visit-db (lmdb/make-named-db cache-dir "to-visit")
-        robots-db   (lmdb/make-named-db cache-dir "robots")
-        hosts-db    (lmdb/make-named-db cache-dir "hosts")
+        visited-db  (lmdb/make-named-db cache-dir
+                                        "visited"
+                                        two-tb)
+        to-visit-db (lmdb/make-named-db cache-dir
+                                        "to-visit"
+                                        two-tb)
+        robots-db   (lmdb/make-named-db cache-dir
+                                        "robots"
+                                        two-tb)
+        hosts-db    (lmdb/make-named-db cache-dir
+                                        "hosts"
+                                        two-tb)
         
         visited-cache  (make-cache-from-db visited-db)
         to-visit-cache (make-cache-from-db to-visit-db)
