@@ -78,7 +78,8 @@
   (let [seeds (:seeds config)]
     (async/go
       (doseq [seed seeds]
-        (queue/enqueue-url seed)))))
+        (queue/enqueue-url seed
+                           config)))))
 
 (defn crawl
   "Main entry point.
@@ -99,14 +100,11 @@
   
   (let [the-config (merge defaults/default-pipeline-config
                           config)
-        init-chan (process/initialize-pipeline the-config)
-
-        ;final-config (merge final-config** {:init-chan init-chan})
-        ]
+        initialized-config (process/initialize-pipeline the-config)
+        init-chan (:init-chan initialized-config)]
 
     ;(defaults/config-logs final-config)
     
-    ;(start-crawl init-chan final-config)
-    ;final-config
-    ))
+    (start-crawl init-chan initialized-config)
+    initialized-config))
 
