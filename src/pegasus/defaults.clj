@@ -359,7 +359,10 @@
     nil))
 
 (def default-pipeline-config
-  {:frontier (->DefaultFrontierPipelineComponent)
+  {:min-delay-ms 2000
+   :state (atom {:num-visited 0})
+   :corpus-size 100
+   :frontier (->DefaultFrontierPipelineComponent)
    :extractor (->DefaultExtractorPipelineComponent)
    :writer (->DefaultWriterPipelineComponent)
    :enqueue (->DefaultEnqueuePipelineComponent)
@@ -416,6 +419,4 @@
                        (io/file logs-dir
                                 "crawl.log"))})}})))
 
-(def default-options {:min-delay-ms 2000
-                      :state (atom {:num-visited 0})
-                      :corpus-size 100})
+(def default-options )
