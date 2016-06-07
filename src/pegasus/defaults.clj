@@ -96,29 +96,24 @@
 
   (initialize
    [this config]
-   (when (-> config
-             :state
-             deref
-             :writer
-             nil?)
-     (let [file-obj (-> config
-                        :corpus-dir
-                        (io/file "corpus.clj.gz"))
-          wrtr (-> file-obj
-                   io/output-stream
-                   (GZIPOutputStream.)
-                   (OutputStreamWriter. "UTF-8")
-                   agent)]
-       (swap! (:state config)
-              merge
-              {:writer wrtr})))
-   config)
+    (when (-> config
+              :writer
+              nil?)
+      (let [file-obj (-> config
+                         :corpus-dir
+                         (io/file "corpus.clj.gz"))
+            wrtr (-> file-obj
+                     io/output-stream
+                     (GZIPOutputStream.)
+                     (OutputStreamWriter. "UTF-8")
+                     agent)]
+        (merge config
+               {:writer wrtr})))
+    config)
 
   (run
     [this obj config]
     (let [gzip-out (-> config
-                       :state
-                       deref
                        :writer)
 
           write-fn (fn [wrtr s]
@@ -183,6 +178,11 @@
   (let [cache-config (pc/initialize-caches user-config)]
     (merge user-config cache-config)))
 
+(defn add-state-portions
+  [config]
+  (merge config
+         {:state (atom {})}))
+
 (deftype DefaultStatePipelineComponent []
   process/PipelineComponentProtocol
 
@@ -190,7 +190,8 @@
     [this config]
     (-> config
         add-location-config
-        add-structs-config))
+        add-structs-config
+        add-state-portions))
 
   (run
     [this obj config]

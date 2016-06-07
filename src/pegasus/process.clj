@@ -44,25 +44,31 @@
     (async/pipeline-blocking parallelism out xf in)
     out))
 
+(defn run-with-input
+  [obj config process-schema component]
+  (as-> obj $
+    (s/validate $ process-schema)
+    (run component $ config)))
+
 (defn run-process
   [component process-schema in-chan parallelism crawl-config]
-  ;; (add-transducer in-chan
-  ;;                 (comp
-  ;;                  (map
-  ;;                   #(try
-  ;;                      (merge %
-  ;;                             {:input
-  ;;                              (do (println component)
-  ;;                                  (as-> % $
-  ;;                                    (get $ :input)
-  ;;                                    (s/validate $ process-schema)))})
-  ;;                      (catch Exception e
-  ;;                        (do (info component)
-  ;;                            (error e)
-  ;;                            (merge % {:input nil})))))
-  ;;                  (filter :input))
-  ;;                 parallelism)
-  (println component))
+  (add-transducer in-chan
+                  (comp
+                   (map
+                    #(try
+                       (merge %
+                              {:input
+                               (run-with-input
+                                (:input %)
+                                (:config %)
+                                process-schema
+                                component)})
+                       (catch Exception e
+                         (do (info component)
+                             (error e)
+                             (merge % {:input nil})))))
+                   (filter :input))
+                  parallelism))
 
 (defn initialize-component-configs
   [pipeline orig-config]
@@ -97,15 +103,12 @@
                         (fn [last-out-channel [component component-schema parallelism]]
                           (info :current-component component)
 
-                          (let [component-cls (get config component)
-
-                                component-obj (component-cls)]
-                            ;; (run-process component-obj
-                            ;;              component-schema
-                            ;;              last-out-channel
-                            ;;              parallelism
-                            ;;              config)
-                            component-obj))
+                          (let [component (get config component)]
+                            (run-process component
+                                         component-schema
+                                         last-out-channel
+                                         parallelism
+                                         config)))
                         init-chan
                         pipeline)]
 
