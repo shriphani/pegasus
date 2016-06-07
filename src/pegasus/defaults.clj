@@ -13,7 +13,8 @@
             [org.bovinegenius.exploding-fish :as uri]
             [pegasus.queue :as queue]
             [pegasus.cache :as pc]
-            [pegasus.state]
+            [pegasus.process :as process]
+            [pegasus.utils :refer [mkdir-if-not-exists]]
             [schema.core :as s]
             [taoensso.timbre :as timbre
              :refer (log  trace  debug  info  warn  error  fatal  report
@@ -26,91 +27,107 @@
 
 (defn get-request
   [url user-agent]
-  (info :getting url)
   (client/get url {:socket-timeout 1000
                    :conn-timeout 1000
                    :headers {"User-Agent" user-agent}}))
 
-(defn default-frontier-fn
-  "The default frontier issues a GET request
-  to the URL"
-  [url]
-  {:url  url
-   :body (-> url
-             (get-request (:user-agent pegasus.state/config))
-             :body)
-   :time (-> (t/now)
-             c/to-long)})
+(deftype DefaultFrontierPipelineComponent []
+  process/PipelineComponentProtocol
 
-(defn default-extractor-fn
-  "Default extractor extracts URLs from anchor tags in
-  a page"
-  [obj]
-  (info :extracting (:url obj))
-  (let [anchor-tags (-> obj
-                        :body
-                        (StringReader.)
-                        html/html-resource
-                        (html/select [:a]))
+  (initialize [config]
+    config)
+
+  (run [url config]
+    {:url  url
+     :body (-> url
+               (get-request (:user-agent config))
+               :body)
+     :time (-> (t/now)
+               c/to-long)})
+
+  (clean [config]
+    nil))
+
+(deftype DefaultExtractorPipelineComponent []
+  process/PipelineComponentProtocol
+
+  (initialize [config]
+    config)
+  
+  (run [obj config]
+    (let [anchor-tags (-> obj
+                          :body
+                          (StringReader.)
+                          html/html-resource
+                          (html/select [:a]))
         
-        url         (:url obj)
+          url         (:url obj)
 
-        can-follow  (filter
-                     #(-> %
-                          :attrs
-                          :rel
-                          (not= "nofollow"))
-                     anchor-tags)
+          can-follow  (filter
+                       #(-> %
+                            :attrs
+                            :rel
+                            (not= "nofollow"))
+                       anchor-tags)
 
-        uris        (map
-                     #(->> %
-                           :attrs
-                           :href)
-                     can-follow)
+          uris        (map
+                       #(->> %
+                             :attrs
+                             :href)
+                       can-follow)
 
-        clean-uris  (filter identity uris)
-        
-        extracted   {:extracted (map #(uri/resolve-uri url %)
-                                     clean-uris)}]
-    (merge obj extracted)))
+          clean-uris  (filter identity uris)
+          
+          extracted   {:extracted (map #(uri/resolve-uri url %)
+                                       clean-uris)}]
+      (merge obj extracted)))
 
-(defn default-writer-fn
-  "The default writer pretty prints the input object
-  to a gzipped corpus file."
-  [obj]
-  (when (-> pegasus.state/config
-            :state
-            deref
-            :writer
-            nil?)
-    (let [file-obj (-> pegasus.state/config
-                       :corpus-dir
-                       (io/file "corpus.clj.gz"))
+  (clean [config]
+    nil))
+
+(deftype DefaultWriterPipelineComponent []
+  process/PipelineComponentProtocol
+
+  (initialize
+   [config]
+   (when (-> config
+             :state
+             deref
+             :writer
+             nil?)
+     (let [file-obj (-> config
+                        :corpus-dir
+                        (io/file "corpus.clj.gz"))
           wrtr (-> file-obj
                    io/output-stream
                    (GZIPOutputStream.)
                    (OutputStreamWriter. "UTF-8")
                    agent)]
-      (swap! (:state pegasus.state/config)
-             merge
-             {:writer wrtr})))
-  
-  ;; now try again :) - ugly code I know :)
-  (let [gzip-out (-> pegasus.state/config
-                     :state
-                     deref
-                     :writer)
+       (swap! (:state config)
+              merge
+              {:writer wrtr})))
+   config)
 
-        write-fn (fn [wrtr s]
-                   (.write wrtr
-                           s)
-                   wrtr)]
-    (send-off gzip-out
-              write-fn
-              (str
-               (clojure.pprint/write obj :stream nil)
-               "\n")))
-  obj)
+  (run
+    [obj config]
+    (let [gzip-out (-> config
+                       :state
+                       deref
+                       :writer)
+
+          write-fn (fn [wrtr s]
+                     (.write wrtr
+                             s)
+                     wrtr)]
+      (send-off gzip-out
+                write-fn
+                (str
+                 (clojure.pprint/write obj :stream nil)
+                 "\n"))
+      obj))
+
+  (clean [config]
+         nil))
 
 (defn default-visited-check
   [obj queue visited]
@@ -125,12 +142,6 @@
    :corpus-dir "corpus"
    :struct-dir "data-structures"
    :logs-dir "logs"})
-
-(defn mkdir-if-not-exists
-  [path]
-  (let [a-file (io/file path)]
-   (when-not (.exists a-file)
-     (fs/mkdir (.getPath a-file)))))
 
 (defn add-location-config
   "Given a user-config, returns a new config
@@ -165,38 +176,45 @@
   (let [cache-config (pc/initialize-caches user-config)]
     (merge user-config cache-config)))
 
-(defn default-update-state
-  "Update caches, insert new URLs"
-  [obj]
-  (let [src-url (:url obj)
+(deftype DefaultStatePipelineComponent []
+  process/PipelineComponentProtocol
 
-        to-visit-cache      (:to-visit-cache pegasus.state/config)
-        visited-cache       (:visited-cache pegasus.state/config)
-        hosts-visited-cache (:hosts-visited-cache pegasus.state/config)
+  (initialize
+    [config]
+    (-> config
+        add-location-config
+        add-structs-config))
 
-        extracted-uris (:extracted obj)]
+  (run
+    [obj config]
+    (let [src-url (:url obj)
+          
+          to-visit-cache      (:to-visit-cache config)
+          visited-cache       (:visited-cache config)
+          hosts-visited-cache (:hosts-visited-cache config)
 
-    ;; cache updates
-    (cache/miss to-visit-cache
-                src-url
-                "1")
-    (cache/miss visited-cache
-                src-url
-                "1")
-    (cache/miss hosts-visited-cache
-                (uri/host src-url)
-                "1")
+          extracted-uris (:extracted obj)]
+      
+      ;; cache updates
+      (cache/miss to-visit-cache
+                  src-url
+                  "1")
+      (cache/miss visited-cache
+                  src-url
+                  "1")
+      (cache/miss hosts-visited-cache
+                  (uri/host src-url)
+                  "1")
 
-    ;; return the object
-    obj))
-
-(defn default-update-stats
-  [obj]
-  ;; :state updates
-  (swap! (:state pegasus.state/config)
+      ;; return the object
+      (swap! (:state config)
          (fn [x]
            (merge-with + x {:num-visited 1})))
-  obj)
+
+      obj))
+
+  (clean [config]
+    nil))
 
 (defn zero-enqueued?
   [q]
@@ -210,17 +228,17 @@
   pipeline but doesn't use any of the objects being
   passed through it; it only looks at
   the crawl-state."
-  [& _]
-  (let [crawl-state (:state pegasus.state/config)
+  [obj config]
+  (let [crawl-state (:state config)
         num-visited (:num-visited @crawl-state)
-        corpus-size (:corpus-size pegasus.state/config)
+        corpus-size (:corpus-size config)
 
-        q (:queue pegasus.state/config)]
+        q (:queue config)]
     (info :num-visited num-visited)
     (when (or (<= corpus-size num-visited)
-              (zero-enqueued? (:queue pegasus.state/config)))
-      (let [init-chan (:init-chan pegasus.state/config)
-            stop-sequence (:stop-sequence pegasus.state/config)]
+              (zero-enqueued? (:queue config)))
+      (let [init-chan (:init-chan config)
+            stop-sequence (:stop-sequence config)]
         
         ;; do not accept any more URIs
         (async/close! init-chan)
@@ -233,30 +251,45 @@
           (doseq [stop-fn stop-sequence]
             (stop-fn)))))))
 
+(deftype DefaultStopPipelineComponent []
+  process/PipelineComponentProtocol
+
+  (initialize
+    [config]
+    config)
+
+  (run
+    [obj config]
+    (default-stop-check obj config))
+
+  (clean
+    [obj]
+    nil))
+
 (defn robots-filter
-  [a-uri]
+  [a-uri config]
   (let [host (uri/host a-uri)
-        robots-cache (:robots-cache pegasus.state/config)
+        robots-cache (:robots-cache config)
         robots-txt (cache/lookup robots-cache
                                  host)
         parsed (robots/parse robots-txt)
-        impolite? (:impolite? pegasus.state/config)]
+        impolite? (:impolite? config)]
     (or impolite?
         (robots/crawlable? robots-txt
                            (uri/path a-uri)
                            :user-agent
-                           (:user-agent pegasus.state/config)))))
+                           (:user-agent config)))))
 
 (defn not-visited
-  [a-uri]
-  (let [visited-cache (:visited-cache pegasus.state/config)]
+  [a-uri config]
+  (let [visited-cache (:visited-cache config)]
     (-> visited-cache
         (cache/lookup a-uri)
         not)))
 
 (defn not-enqueued
-  [a-uri]
-  (let [to-visit-cache (:to-visit-cache pegasus.state/config)]
+  [a-uri config]
+  (let [to-visit-cache (:to-visit-cache config)]
     (-> to-visit-cache
         (cache/lookup a-uri)
         not)))
@@ -273,28 +306,57 @@
                          (not-enqueued %))
                    (:extracted obj)))}))
 
+(deftype DefaultFilterPipelineComponent []
+  process/PipelineComponentProtocol
+
+  (initialize
+    [config]
+    config)
+
+  (run
+    [obj config]
+    (default-filter obj))
+
+  (clean
+    [config]
+    nil))
+
 (defn close-wrtr
-  []
-  (let [wrtr (:writer @(:state pegasus.state/config))]
+  [config]
+  (let [wrtr (:writer @(:state config))]
     (-> wrtr
         deref
         (.close))))
 
 (defn mark-stop
-  []
-  (swap! (:state pegasus.state/config)
+  [config]
+  (swap! (:state config)
          (fn [x]
            (merge x {:stop? true}))))
 
+(deftype DefaultEnqueuePipelineComponent []
+  process/PipelineComponentProtocol
+
+  (initialize
+    [config]
+    (queue/build-queue-config config))
+
+  (run
+    [obj config]
+    (queue/enqueue-pipeline obj config))
+
+  (clean
+    [config]
+    nil))
+
 (def default-pipeline-config
-  {:frontier default-frontier-fn
-   :extractor default-extractor-fn
-   :writer default-writer-fn
-   :enqueue queue/enqueue-pipeline
-   :update-state default-update-state
-   :update-stats default-update-stats
-   :test-and-halt default-stop-check
-   :filter default-filter
+  {:frontier DefaultFrontierPipelineComponent
+   :extractor DefaultExtractorPipelineComponent
+   :writer DefaultWriterPipelineComponent
+   :enqueue DefaultEnqueuePipelineComponent
+   :update-state DefaultStatePipelineComponent
+   :test-and-halt DefaultStopPipelineComponent
+   :filter DefaultFilterPipelineComponent
    :stop-sequence [close-wrtr mark-stop]
    :pipeline [[:frontier s/Str 5]
               [:extractor {:url s/Str,
@@ -316,10 +378,6 @@
                          :body s/Str
                          :time s/Int
                          :extracted [s/Str]} 5]
-              [:update-stats {:url s/Str
-                              :body s/Str
-                              :time s/Int
-                              :extracted [s/Str]} 5]
               [:test-and-halt s/Any 5]]})
 
 (defn enforce-pipeline-check

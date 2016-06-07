@@ -5,14 +5,14 @@
             [durable-queue :refer :all]
             [org.bovinegenius.exploding-fish :as uri]
             [clojure.core.cache :as cache]
-            [pegasus.state :as state]
+            [pegasus.process :as process]
             [taoensso.timbre :as timbre
              :refer (log  trace  debug  info  warn  error  fatal  report
                           logf tracef debugf infof warnf errorf fatalf reportf
                           spy get-env log-env)]))
 
 (defn handle-robots-url
-  [url]
+  [url config]
   (let [robots-payload (try
                          (:body
                           (client/get url
@@ -20,10 +20,10 @@
                                        :conn-timeout 1000
                                        :headers
                                        {"User-Agent"
-                                        (:user-agent state/config)}}))
+                                        (:user-agent config)}}))
                          (catch Exception e nil))
 
-        robots-cache (:robots-cache state/config)
+        robots-cache (:robots-cache config)
         
         host (uri/host url)]
     
@@ -36,10 +36,10 @@
                   "User-Agent *\nAllow /"))))
 
 (defn setup-queue-worker
-  [q q-name]
+  [q q-name config]
   (info :setting-up-q-worker)
-  (let [default-delay (:min-delay-ms state/config)
-        init-chan (:init-chan state/config)]
+  (let [default-delay (:min-delay-ms config)
+        init-chan (:init-chan config)]
     (async/go-loop []
 
       ;; a timeout first
@@ -58,13 +58,13 @@
           (let [url (deref task)]
             (info :obtained url)
             (if (= (uri/path url) "/robots.txt")
-              (handle-robots-url url)
+              (handle-robots-url url config)
               (async/>! init-chan {:input url
-                                   :config state/config}))
+                                   :config config}))
             (complete! task))))
       
       (when-not (:stop?
-                 @(:state state/config))
+                 @(:state config))
        (recur)))))
 
 (defn enqueue-robots
@@ -77,12 +77,12 @@
                 "1")))
 
 (defn enqueue-url
-  [url]
+  [url config]
   (let [q-name (-> url uri/host keyword)
-        struct-dir (:struct-dir state/config)
-        q (:queue state/config)
-        visited-hosts (:hosts-visited-cache state/config)
-        to-visit-cache (:to-visit-cache state/config)]
+        struct-dir (:struct-dir config)
+        q (:queue config)
+        visited-hosts (:hosts-visited-cache config)
+        to-visit-cache (:to-visit-cache config)]
 
     ;; before we first hit a host, we need to confirm
     ;; that robots.txt has been obtained.
@@ -95,7 +95,7 @@
           (enqueue-robots url q visited-hosts))
       
       (do (debug :here-2? url)
-          (setup-queue-worker q q-name)))
+          (setup-queue-worker q q-name config)))
     
     ;; insert this URL.
     (put! q q-name url)
@@ -107,10 +107,10 @@
   "A pipeline component that consumes urls
   from the supplied object, enqueues them
   and continues."
-  [obj]
+  [obj config]
   (let [extracted-uris (:extracted obj)]
     (doseq [uri extracted-uris]
-      (enqueue-url uri))
+      (enqueue-url uri config))
     obj))
 
 (defn build-queue-config
