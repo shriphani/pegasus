@@ -47,7 +47,7 @@
 (defn run-with-input
   [obj config process-schema component]
   (as-> obj $
-    (s/validate $ process-schema)
+    (s/validate process-schema $)
     (run component $ config)))
 
 (defn run-process
