@@ -23,13 +23,16 @@
 
   ;; initialize is called when the crawl
   ;; starts.
-  (initialize [config])
+  (initialize
+    [this config])
 
   ;; run is called during the crawl when a new URL is visited
-  (run [obj config])
+  (run
+    [this obj config])
 
   ;; clean is called when the crawler is shutting down.
-  (clean [config]))
+  (clean
+    [this config]))
 
 (defn add-transducer
   [in xf parallelism]
@@ -41,22 +44,35 @@
     (async/pipeline-blocking parallelism out xf in)
     out))
 
-;; (defn run-process
-;;   [component process-schema in-chan parallelism crawl-config]
-;;   (add-transducer in-chan
-;;                   (comp (map #(try
-;;                                 (merge %
-;;                                        {:input (with-config (:config %)
-;;                                                  (->> %
-;;                                                       :input
-;;                                                       (s/validate process-schema)
-;;                                                       ((get crawl-config component))))})
-;;                                 (catch Exception e
-;;                                   (do (info component)
-;;                                       (error e)
-;;                                       (merge % {:input nil})))))
-;;                         (filter :input))
-;;                   parallelism))
+(defn run-process
+  [component process-schema in-chan parallelism crawl-config]
+  ;; (add-transducer in-chan
+  ;;                 (comp
+  ;;                  (map
+  ;;                   #(try
+  ;;                      (merge %
+  ;;                             {:input
+  ;;                              (do (println component)
+  ;;                                  (as-> % $
+  ;;                                    (get $ :input)
+  ;;                                    (s/validate $ process-schema)))})
+  ;;                      (catch Exception e
+  ;;                        (do (info component)
+  ;;                            (error e)
+  ;;                            (merge % {:input nil})))))
+  ;;                  (filter :input))
+  ;;                 parallelism)
+  (println component))
+
+(defn initialize-component-configs
+  [pipeline orig-config]
+  (reduce
+   (fn [config [component _ _]]
+     (let [cls   (get config component)]
+       (initialize cls
+                   config)))
+   orig-config
+   pipeline))
 
 (defn initialize-pipeline
   "A pipeline contains kws - fn-map
@@ -68,21 +84,29 @@
   The last component is the writer"
   [config]
   (info (:pipeline config))
-  ;; (let [pipeline (:pipeline config)
+  (let [pipeline  (:pipeline config)
 
-  ;;       init-chan (async/chan (async/buffer 1024))
+        init-chan (async/chan (async/buffer 1024))
 
-  ;;       final-out-chan (reduce
-  ;;                       (fn [last-out-channel [component component-schema parallelism]]
-  ;;                         (info :current-component component)
- 
-  ;;                         (run-process component
-  ;;                                      component-schema
-  ;;                                      last-out-channel
-  ;;                                      parallelism
-  ;;                                      config))
-  ;;                       init-chan
-  ;;                       pipeline)]
+        initialized-config (initialize-component-configs pipeline
+                                                         config)
+        
+        _ (println initialized-config)
 
-  ;;   init-chan)
-  )
+        final-out-chan (reduce
+                        (fn [last-out-channel [component component-schema parallelism]]
+                          (info :current-component component)
+
+                          (let [component-cls (get config component)
+
+                                component-obj (component-cls)]
+                            ;; (run-process component-obj
+                            ;;              component-schema
+                            ;;              last-out-channel
+                            ;;              parallelism
+                            ;;              config)
+                            component-obj))
+                        init-chan
+                        pipeline)]
+
+    init-chan))

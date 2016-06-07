@@ -97,17 +97,12 @@
 
   (enforce-politeness config)
   
-  (let [final-config* (-> config
-                          defaults/add-location-config     ;; sets up the job directory
-                          defaults/add-structs-config      ;; sets up caches
-                          defaults/build-pipeline-config   ;; builds a pipeline
-                          queue/build-queue-config) 
-        
-        final-config**  (merge defaults/default-options final-config*)
+  (let [the-config (merge defaults/default-pipeline-config
+                          config)
+        init-chan (process/initialize-pipeline the-config)
 
-        init-chan (process/initialize-pipeline final-config**)
-
-        final-config (merge final-config** {:init-chan init-chan})]
+        ;final-config (merge final-config** {:init-chan init-chan})
+        ]
 
     ;(defaults/config-logs final-config)
     

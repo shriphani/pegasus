@@ -34,10 +34,12 @@
 (deftype DefaultFrontierPipelineComponent []
   process/PipelineComponentProtocol
 
-  (initialize [config]
+  (initialize
+    [this config]
     config)
 
-  (run [url config]
+  (run
+    [this url config]
     {:url  url
      :body (-> url
                (get-request (:user-agent config))
@@ -45,16 +47,19 @@
      :time (-> (t/now)
                c/to-long)})
 
-  (clean [config]
+  (clean
+    [this config]
     nil))
 
 (deftype DefaultExtractorPipelineComponent []
   process/PipelineComponentProtocol
 
-  (initialize [config]
+  (initialize
+    [this config]
     config)
   
-  (run [obj config]
+  (run
+    [this obj config]
     (let [anchor-tags (-> obj
                           :body
                           (StringReader.)
@@ -82,14 +87,15 @@
                                        clean-uris)}]
       (merge obj extracted)))
 
-  (clean [config]
+  (clean
+    [this config]
     nil))
 
 (deftype DefaultWriterPipelineComponent []
   process/PipelineComponentProtocol
 
   (initialize
-   [config]
+   [this config]
    (when (-> config
              :state
              deref
@@ -109,7 +115,7 @@
    config)
 
   (run
-    [obj config]
+    [this obj config]
     (let [gzip-out (-> config
                        :state
                        deref
@@ -126,8 +132,9 @@
                  "\n"))
       obj))
 
-  (clean [config]
-         nil))
+  (clean
+    [this config]
+    nil))
 
 (defn default-visited-check
   [obj queue visited]
@@ -180,13 +187,13 @@
   process/PipelineComponentProtocol
 
   (initialize
-    [config]
+    [this config]
     (-> config
         add-location-config
         add-structs-config))
 
   (run
-    [obj config]
+    [this obj config]
     (let [src-url (:url obj)
           
           to-visit-cache      (:to-visit-cache config)
@@ -213,7 +220,8 @@
 
       obj))
 
-  (clean [config]
+  (clean
+    [this config]
     nil))
 
 (defn zero-enqueued?
@@ -255,15 +263,15 @@
   process/PipelineComponentProtocol
 
   (initialize
-    [config]
+    [this config]
     config)
 
   (run
-    [obj config]
+    [this obj config]
     (default-stop-check obj config))
 
   (clean
-    [obj]
+    [this config]
     nil))
 
 (defn robots-filter
@@ -310,15 +318,15 @@
   process/PipelineComponentProtocol
 
   (initialize
-    [config]
+    [this config]
     config)
 
   (run
-    [obj config]
+    [this obj config]
     (default-filter obj))
 
   (clean
-    [config]
+    [this config]
     nil))
 
 (defn close-wrtr
@@ -338,25 +346,25 @@
   process/PipelineComponentProtocol
 
   (initialize
-    [config]
+    [this config]
     (queue/build-queue-config config))
 
   (run
-    [obj config]
+    [this obj config]
     (queue/enqueue-pipeline obj config))
 
   (clean
-    [config]
+    [this config]
     nil))
 
 (def default-pipeline-config
-  {:frontier DefaultFrontierPipelineComponent
-   :extractor DefaultExtractorPipelineComponent
-   :writer DefaultWriterPipelineComponent
-   :enqueue DefaultEnqueuePipelineComponent
-   :update-state DefaultStatePipelineComponent
-   :test-and-halt DefaultStopPipelineComponent
-   :filter DefaultFilterPipelineComponent
+  {:frontier (->DefaultFrontierPipelineComponent)
+   :extractor (->DefaultExtractorPipelineComponent)
+   :writer (->DefaultWriterPipelineComponent)
+   :enqueue (->DefaultEnqueuePipelineComponent)
+   :update-state (->DefaultStatePipelineComponent)
+   :test-and-halt (->DefaultStopPipelineComponent)
+   :filter (->DefaultFilterPipelineComponent)
    :stop-sequence [close-wrtr mark-stop]
    :pipeline [[:frontier s/Str 5]
               [:extractor {:url s/Str,
