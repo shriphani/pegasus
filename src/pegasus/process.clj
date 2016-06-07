@@ -103,13 +103,14 @@
                         (fn [last-out-channel [component component-schema parallelism]]
                           (info :current-component component)
 
-                          (let [component (get config component)]
+                          (let [component (get initialized-config component)]
                             (run-process component
                                          component-schema
                                          last-out-channel
                                          parallelism
-                                         config)))
+                                         initialized-config)))
                         init-chan
                         pipeline)]
 
-    init-chan))
+    (merge initialized-config
+           {:init-chan init-chan})))
