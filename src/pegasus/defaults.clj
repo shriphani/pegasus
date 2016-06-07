@@ -254,8 +254,9 @@
         ;; any destructors needed are placed
         ;; here during the crawl phase
         (when stop-sequence
+          (info :stop-items (count stop-sequence))
           (doseq [stop-fn stop-sequence]
-            (stop-fn)))))))
+            (stop-fn config)))))))
 
 (deftype DefaultStopPipelineComponent []
   process/PipelineComponentProtocol
@@ -331,16 +332,16 @@
 
 (defn close-wrtr
   [config]
-  (let [wrtr (:writer @(:state config))]
-    (-> wrtr
-        deref
-        (.close))))
+  (let [wrtr (-> config
+                 :writer-agent
+                 deref)]
+    (.close wrtr)))
 
 (defn mark-stop
   [config]
   (swap! (:state config)
-         (fn [x]
-           (merge x {:stop? true}))))
+         merge
+         {:stop? true}))
 
 (deftype DefaultEnqueuePipelineComponent []
   process/PipelineComponentProtocol
@@ -417,5 +418,3 @@
               {:fname (.getAbsolutePath
                        (io/file logs-dir
                                 "crawl.log"))})}})))
-
-(def default-options )

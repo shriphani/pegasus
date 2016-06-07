@@ -5,7 +5,9 @@
             [me.raynes.fs :as fs]
             [pegasus.core :refer :all]
             [pegasus.defaults :as defaults]
-            [pegasus.utils :as utils]))
+            [pegasus.utils :as utils]
+            [taoensso.timbre :as timbre
+             :refer (info)]))
 
 (def mock-bodies
   {"http://foo.com/1"
@@ -96,27 +98,12 @@
                       @(:state final-config))]
 
             (if stop
-              (is
-               (= (:num-visited
-                   @(:state final-config))
-                  5))
-              (recur)))))))
-
-  (testing "Does the crawl grab the correct number of docs? Are they unique?"
-    (with-redefs [defaults/get-request (fn [x y]
-                                         (get mock-bodies x))]
-      (let [final-config (crawl {:seeds ["http://foo.com/1"]
-                                 :impolite? true
-                                 :user-agent "Hello!!!"
-                                 :job-dir *current-dir*
-                                 :corpus-size 5
-                                 :min-delay-ms 0})]
-        (loop []
-          
-          (let [stop (:stop?
-                      @(:state final-config))]
-
-            (if stop
-              (is
-               (all-unique? (io/file (:corpus-dir final-config))))
+              (do (is
+                   (= (:num-visited
+                       @(:state final-config))
+                      5))
+                  (is
+                   (all-unique?
+                    (io/file
+                     (:corpus-dir final-config)))))
               (recur))))))))
