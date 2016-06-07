@@ -96,21 +96,17 @@
   process/PipelineComponentProtocol
 
   (initialize
-   [this config]
-    (when (-> config
-              :writer-agent
-              nil?)
-      (let [file-obj (-> config
-                         :corpus-dir
-                         (io/file "corpus.clj.gz"))
-            wrtr (-> file-obj
-                     io/output-stream
-                     (GZIPOutputStream.)
-                     (OutputStreamWriter. "UTF-8")
-                     agent)]
-        (merge config
-               {:writer-agent wrtr})))
-    config)
+    [this config]
+    (let [file-obj (-> config
+                       :corpus-dir
+                       (io/file "corpus.clj.gz"))
+          wrtr (-> file-obj
+                   io/output-stream
+                   (GZIPOutputStream.)
+                   (OutputStreamWriter. "UTF-8")
+                   agent)]
+      (merge config
+             {:writer-agent wrtr})))
 
   (run
     [this obj config]
