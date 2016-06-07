@@ -27,6 +27,7 @@
 
 (defn get-request
   [url user-agent]
+  (info :getting url)
   (client/get url {:socket-timeout 1000
                    :conn-timeout 1000
                    :headers {"User-Agent" user-agent}}))
@@ -97,7 +98,7 @@
   (initialize
    [this config]
     (when (-> config
-              :writer
+              :writer-agent
               nil?)
       (let [file-obj (-> config
                          :corpus-dir
@@ -108,13 +109,13 @@
                      (OutputStreamWriter. "UTF-8")
                      agent)]
         (merge config
-               {:writer wrtr})))
+               {:writer-agent wrtr})))
     config)
 
   (run
     [this obj config]
     (let [gzip-out (-> config
-                       :writer)
+                       :writer-agent)
 
           write-fn (fn [wrtr s]
                      (.write wrtr
@@ -305,14 +306,14 @@
 
 (defn default-filter
   "By default, we ignore robots.txt urls"
-  [obj]
+  [obj config]
   (merge obj
          {:extracted
           (distinct
            (filter #(and %
-                         (robots-filter %)
-                         (not-visited %)
-                         (not-enqueued %))
+                         (robots-filter % config)
+                         (not-visited % config)
+                         (not-enqueued % config))
                    (:extracted obj)))}))
 
 (deftype DefaultFilterPipelineComponent []
@@ -324,7 +325,9 @@
 
   (run
     [this obj config]
-    (default-filter obj))
+    (default-filter
+      obj
+      config))
 
   (clean
     [this config]
