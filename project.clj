@@ -17,5 +17,6 @@
                  [org.clojure/clojure "1.8.0"]
                  [org.clojure/core.async "0.2.374"]
                  [org.clojure/tools.namespace "0.2.11"]
-                 [prismatic/schema "1.1.0"]]
+                 [prismatic/schema "1.1.0"]
+                 [slingshot "0.12.2"]]
   :plugins [[lein-ancient "0.6.8"]])
