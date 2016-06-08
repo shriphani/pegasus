@@ -35,6 +35,21 @@
     [this config]
     nil))
 
+(deftype MalformedPipelineComponent []
+  process/PipelineComponentProtocol
+
+  (initialize
+    [this config]
+    nil)
+
+  (run
+    [this obj config]
+    obj)
+
+  (clean
+    [this config]
+    nil))
+
 (deftest pipeline-test
 
   (testing "Create a pipeline - which initializes a blank config"
@@ -72,4 +87,18 @@
       (-> final-conf2
           :shit
           (= 4)
-          is))))
+          is)))
+
+  (testing "Create a malformed initializer"
+    (let [orig-config {:component1 (->MalformedPipelineComponent)
+                       :component2 (->MalformedPipelineComponent)
+                       :component3 (->MalformedPipelineComponent)
+                       :component4 (->MalformedPipelineComponent)
+                       :pipeline [[:component1 nil 1]
+                                  [:component2 nil 1]
+                                  [:component3 nil 1]
+                                  [:component4 nil 1]]}]
+      (is
+       (thrown?
+        Exception
+        (process/initialize-component-configs orig-config))))))

@@ -8,6 +8,7 @@
   (:require [clojure.core.async :as async]
             [clojure.repl :refer [pst]]
             [schema.core :as s]
+            [slingshot.slingshot :refer [throw+]]
             [taoensso.timbre :as timbre
              :refer (log  trace  debug  info  warn  error  fatal  report
                           logf tracef debugf infof warnf errorf fatalf reportf
@@ -70,14 +71,35 @@
                    (filter :input))
                   parallelism))
 
+(defn is-config?
+  "Simple heuristics to check if
+  a map is still a config.
+  Must be a map,
+  must contain a pipeline key
+  entries must have values - no mixins i.e."
+  [a-config]
+  (and (map? a-config)
+       (:pipeline a-config)
+       (reduce
+        (fn [x [component _ _]]
+          (and x (get a-config component)))
+        true
+        (:pipeline a-config))))
+
 (defn initialize-component-configs
   [orig-config]
   (let [pipeline (:pipeline orig-config)]
     (reduce
      (fn [config [component _ _]]
-       (let [cls   (get config component)]
-         (initialize cls
-                     config)))
+       (let [cls   (get config component)
+
+             initialized-config
+             (initialize cls
+                         config)]
+         (when-not (is-config? initialized-config)
+           (throw+ {:type :malformed-config
+                    :config initialized-config}))
+         initialized-config))
      orig-config
      pipeline)))
 
