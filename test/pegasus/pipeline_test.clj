@@ -18,6 +18,23 @@
     [this config]
     nil))
 
+(deftype NotIdentityPipelineComponent []
+  process/PipelineComponentProtocol
+
+  (initialize
+    [this config]
+    (merge-with +
+                config
+                {:shit 1}))
+
+  (run
+    [this obj config]
+    obj)
+
+  (clean
+    [this config]
+    nil))
+
 (deftest pipeline-test
 
   (testing "Create a pipeline - which initializes a blank config"
@@ -30,8 +47,29 @@
                                   [:component3 nil 1]
                                   [:component4 nil 1]]}
 
-          final-config (process/initialize-component-configs orig-config)]
+          orig-config2 {:component1 (->NotIdentityPipelineComponent)
+                        :component2 (->NotIdentityPipelineComponent)
+                        :component3 (->NotIdentityPipelineComponent)
+                        :component4 (->NotIdentityPipelineComponent)
+                        :pipeline [[:component1 nil 1]
+                                   [:component2 nil 1]
+                                   [:component3 nil 1]
+                                   [:component4 nil 1]]}
+
+          final-config (process/initialize-component-configs orig-config)
+
+          final-conf2  (process/initialize-component-configs orig-config2)]
 
       (is
        (= final-config
-          orig-config)))))
+          orig-config))
+
+      (is
+       (not
+        (= orig-config2
+           final-conf2)))
+
+      (-> final-conf2
+          :shit
+          (= 4)
+          is))))
