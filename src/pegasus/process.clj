@@ -71,14 +71,15 @@
                   parallelism))
 
 (defn initialize-component-configs
-  [pipeline orig-config]
-  (reduce
-   (fn [config [component _ _]]
-     (let [cls   (get config component)]
-       (initialize cls
-                   config)))
-   orig-config
-   pipeline))
+  [orig-config]
+  (let [pipeline (:pipeline orig-config)]
+    (reduce
+     (fn [config [component _ _]]
+       (let [cls   (get config component)]
+         (initialize cls
+                     config)))
+     orig-config
+     pipeline)))
 
 (defn initialize-pipeline
   "A pipeline contains kws - fn-map
@@ -94,8 +95,7 @@
 
         init-chan (async/chan (async/buffer 1024))
 
-        initialized-config (initialize-component-configs pipeline
-                                                         config)
+        initialized-config (initialize-component-configs config)
         
         _ (println initialized-config)
 
