@@ -30,7 +30,8 @@
   (info :getting url)
   (client/get url {:socket-timeout 1000
                    :conn-timeout 1000
-                   :headers {"User-Agent" user-agent}}))
+                   :headers {"User-Agent" user-agent}
+                   :insecure? true}))
 
 (deftype DefaultFrontierPipelineComponent []
   process/PipelineComponentProtocol
