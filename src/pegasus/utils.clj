@@ -1,8 +1,7 @@
 (ns pegasus.utils
   "General utils"
   (:require [clojure.java.io :as io]
-            [me.raynes.fs :as fs]
-            [pegasus.state :as state])
+            [me.raynes.fs :as fs])
   (:import [java.io FileInputStream InputStreamReader PushbackReader]
            [java.util.zip GZIPInputStream]))
 
@@ -23,12 +22,6 @@
       (GZIPInputStream.)
       (InputStreamReader. "UTF-8")
       (PushbackReader.)))
-
-(defmacro with-config
-  ""
-  [config & body]
-  `(binding [pegasus.state/config ~config]
-     ~@body))
 
 (defn mkdir-if-not-exists
   [path]

@@ -78,8 +78,8 @@
   (let [seeds (:seeds config)]
     (async/go
       (doseq [seed seeds]
-        (binding [pegasus.state/config config]
-          (queue/enqueue-url seed))))))
+        (queue/enqueue-url seed
+                           config)))))
 
 (defn crawl
   "Main entry point.
@@ -98,20 +98,13 @@
 
   (enforce-politeness config)
   
-  (let [final-config* (-> config
-                          defaults/add-location-config     ;; sets up the job directory
-                          defaults/add-structs-config      ;; sets up caches
-                          defaults/build-pipeline-config   ;; builds a pipeline
-                          queue/build-queue-config) 
-        
-        final-config**  (merge defaults/default-options final-config*)
+  (let [the-config (merge defaults/default-pipeline-config
+                          config)
+        initialized-config (process/initialize-pipeline the-config)
+        init-chan (:init-chan initialized-config)]
 
-        init-chan (process/initialize-pipeline final-config**)
-
-        final-config (merge final-config** {:init-chan init-chan})]
-
-    (defaults/config-logs final-config)
+    ;(defaults/config-logs final-config)
     
-    (start-crawl init-chan final-config)
-    final-config))
+    (start-crawl init-chan initialized-config)
+    initialized-config))
 
