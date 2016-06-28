@@ -13,7 +13,8 @@
             [taoensso.timbre :as timbre
              :refer (log  trace  debug  info  warn  error  fatal  report
                           logf tracef debugf infof warnf errorf fatalf reportf
-                          spy get-env log-env)]))
+                          spy get-env log-env)])
+  (:import [pegasus.process PipelineComponentProtocol]))
 
 (defn alternate-swap!
   "This version returns the swapped out value as well"
@@ -80,6 +81,51 @@
       (doseq [seed seeds]
         (queue/enqueue-url seed
                            config)))))
+
+(defn run-through-selectors
+  [obj config]
+  )
+
+(defmacro extract
+  [&body]
+  `(reify
+     process/PipelineComponentProtocol
+     (initialize
+       [this config]
+       ~@body)
+
+     (run
+       [this obj config]
+       (run-through-selectors obj
+                              config))
+
+     (clean
+       [this config]
+       nil)))
+
+(defmacro from-xpath
+  [xpath-query]
+  (merge-with concat
+              config
+              {:xpath-queries [xpath-query]}))
+
+(defmacro from-enlive-selector
+  [selector]
+  (merge-with concat
+              config
+              {:enlive-selectors [selector]}))
+
+(defmacro from-enlive-selectors
+  [selectors]
+  (merge-with concat
+              config
+              {:enlive-selectors selectors}))
+
+(defmacro from-xpaths
+  [xpath-queries]
+  (merge-with concat
+              config
+              {:xpath-queries xpath-queries}))
 
 (defn crawl
   "Main entry point.
