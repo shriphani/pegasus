@@ -13,7 +13,8 @@
             [taoensso.timbre :as timbre
              :refer (log  trace  debug  info  warn  error  fatal  report
                           logf tracef debugf infof warnf errorf fatalf reportf
-                          spy get-env log-env)]))
+                          spy get-env log-env)])
+  (:import [pegasus.process PipelineComponentProtocol]))
 
 (defn alternate-swap!
   "This version returns the swapped out value as well"

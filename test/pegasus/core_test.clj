@@ -84,8 +84,11 @@
 
 (deftest test-stop-unique
   (testing "Does the crawl grab the correct number of docs? Are they unique?"
-    (with-redefs [defaults/get-request (fn [x y]
-                                         (get mock-bodies x))]
+    (with-redefs [defaults/get-request (fn
+                                         ([& args]
+                                          (->> args
+                                               first
+                                               (get mock-bodies))))]
       (let [final-config (crawl {:seeds ["http://foo.com/1"]
                                  :impolite? true
                                  :user-agent "Hello!!!"

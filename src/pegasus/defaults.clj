@@ -26,12 +26,18 @@
            [java.util.zip GZIPOutputStream]))
 
 (defn get-request
-  [url user-agent]
-  (info :getting url)
-  (client/get url {:socket-timeout 1000
-                   :conn-timeout 1000
-                   :headers {"User-Agent" user-agent}
-                   :insecure? true}))
+  ([url user-agent]
+   (get-request url
+                user-agent
+                1000
+                1000))
+
+  ([url user-agent socket-timeout conn-timeout]
+   (info :getting url)
+   (client/get url {:socket-timeout socket-timeout
+                    :conn-timeout conn-timeout
+                    :headers {"User-Agent" user-agent}
+                    :insecure? true})))
 
 (deftype DefaultFrontierPipelineComponent []
   process/PipelineComponentProtocol
@@ -44,7 +50,9 @@
     [this url config]
     {:url  url
      :body (-> url
-               (get-request (:user-agent config))
+               (get-request (:user-agent config)
+                            (:socket-timeout config)
+                            (:conn-timeout config))
                :body)
      :time (-> (t/now)
                c/to-long)})
@@ -361,6 +369,8 @@
 
 (def default-pipeline-config
   {:min-delay-ms 2000
+   :socket-timeout 20000
+   :conn-timeout 20000
    :state (atom {:num-visited 0})
    :corpus-size 100
    :frontier (->DefaultFrontierPipelineComponent)
