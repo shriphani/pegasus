@@ -5,7 +5,6 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[clj-http "2.1.0"]
                  [clj-named-leveldb "0.1.0"]
-                 [clj-lmdb "0.2.4"]
                  [clj-robots "0.6.0"]
                  [clj-time "0.11.0"]
                  [com.taoensso/timbre "4.3.1"]
