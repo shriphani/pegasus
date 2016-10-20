@@ -1,9 +1,11 @@
 (ns pegasus.cache
   "A simple cache using LMDB"
   (:require [clj-lmdb.simple :as lmdb]
+            [clj-leveldb :as leveldb]
+            [clj-named-leveldb.core :as named-leveldb]
             [clojure.java.io :as io]
             [clojure.string :as string]
-            [fort-knox.core :refer :all]
+            [fort-knox.leveldb :refer :all]
             [pegasus.utils :as utils]
             [taoensso.timbre :as timbre
              :refer (log debug info)]))
@@ -17,19 +19,17 @@
 
   (let [two-tb    2147483648
         cache-dir (:struct-dir config)
+
+        base-db   (leveldb/create-db cache-dir {})
         
-        visited-db  (lmdb/make-named-db cache-dir
-                                        "visited"
-                                        two-tb)
-        to-visit-db (lmdb/make-named-db cache-dir
-                                        "to-visit"
-                                        two-tb)
-        robots-db   (lmdb/make-named-db cache-dir
-                                        "robots"
-                                        two-tb)
-        hosts-db    (lmdb/make-named-db cache-dir
-                                        "hosts"
-                                        two-tb)
+        visited-db  (named-leveldb/make-named-db base-db
+                                                 "visited")
+        to-visit-db (named-leveldb/make-named-db base-db
+                                                 "to-visit")
+        robots-db   (named-leveldb/make-named-db base-db
+                                                 "robots")
+        hosts-db    (named-leveldb/make-named-db base-db
+                                                 "hosts")
         
         visited-cache  (make-cache-from-db visited-db)
         to-visit-cache (make-cache-from-db to-visit-db)
