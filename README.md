@@ -29,17 +29,19 @@ URLs are extracted using `enlive` selectors.
             [net.cgrand.enlive-html :as html]
             [pegasus.core :refer [crawl]])
   (:import (java.io StringReader)))
-
-(defn crawl-sp-blog
-  []
-  (crawl {:seeds ["http://blog.shriphani.com"]
-          :user-agent "Pegasus web crawler"
-          :extractor
-          (fn [obj]
-            ;; ensure that we only extract in domain
-            (when (= "blog.shriphani.com"
+			
+(deftype EnliveExtractor []
+  process/PipelineComponentProtocol
+  
+  (initialize
+    [this config]
+    config)
+  
+  (run
+    [this obj config]
+    (when (= "blog.shriphani.com"
                      (-> obj :url uri/host))
-              
+
               (let [url (:url obj)
                     resource (-> obj
                                  :body
@@ -70,13 +72,21 @@ URLs are extracted using `enlive` selectors.
                 ;; add extracted links to the supplied object
                 (merge obj
                        {:extracted links}))))
-          
+
+  (clean
+    [this config]
+    nil))
+
+(defn crawl-sp-blog
+  []
+  (crawl {:seeds ["http://blog.shriphani.com"]
+          :user-agent "Pegasus web crawler"
+          :extractor (->EnliveExtractor)
+
           :corpus-size 20 ;; crawl 20 documents
-          :job-dir "/tmp/sp-blog-corpus"})) ;; store all crawl data in /tmp/sp-blog-corpus/
+          :job-dir "/tmp/sp-blog-corpus"}))
 
-;; start crawling
 (crawl-sp-blog)
-
 ```
 
 This one uses XPath queries courtesy of `clj-xpath`.
@@ -89,32 +99,44 @@ Using XPaths:
             [net.cgrand.enlive-html :as html]
             [pegasus.core :refer [crawl]]
             [clj-xpath.core :refer [$x $x:text xml->doc]]))
+
+(deftype XpathExtractor []
+  process/PipelineComponentProtocol
+  
+  (initialize
+    [this config]
+    config)
+  
+  (run
+    [this obj config]
+    (when (= "blog.shriphani.com"
+             (-> obj :url uri/host))
+      
+      (let [url (:url obj)
+            resource (try (-> obj
+                              :body
+                              xml->doc)
+                          (catch Exception e nil))
             
+            ;; extract the articles
+            articles (map
+                      :text
+                      (try ($x "//item/link" resource)
+                           (catch Exception e nil)))]
+        
+        ;; add extracted links to the supplied object
+        (merge obj
+               {:extracted articles}))))
+
+  (clean
+    [this config]
+    nil))
+
 (defn crawl-sp-blog-xpaths
   []
-    (crawl {:seeds ["http://blog.shriphani.com/feeds/all.rss.xml"]
-            :user-agent "Pegasus web crawler"
-            :extractor
-            (fn [obj]
-              ;; ensure that we only extract in domain
-              (when (= "blog.shriphani.com"
-                     (-> obj :url uri/host))
-                
-                (let [url (:url obj)
-                      resource (try (-> obj
-                                        :body
-                                        xml->doc)
-                                    (catch Exception e nil))
-
-                      ;; extract the articles
-                      articles (map
-                                :text
-                                (try ($x "//item/link" resource)
-                                     (catch Exception e nil)))]
-                  
-                  ;; add extracted links to the supplied object
-                  (merge obj
-                         {:extracted articles}))))
+  (crawl {:seeds ["http://blog.shriphani.com/feeds/all.rss.xml"]
+          :user-agent "Pegasus web crawler"
+          :extractor (->XpathExtractor)
           
           :corpus-size 20 ;; crawl 20 documents
           :job-dir "/tmp/sp-blog-corpus"}))
