@@ -1,4 +1,4 @@
-(defproject pegasus "0.6.3"
+(defproject pegasus "0.6.4"
   :description "A scaleable production-ready crawler in clojure"
   :url "http://github.com/shriphani/pegasus"
   :license {:name "Eclipse Public License"
