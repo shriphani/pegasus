@@ -78,38 +78,23 @@
   (run
     [this obj config]
     (when (= "blog.shriphani.com"
-                     (-> obj :url uri/host))
-
-              (let [url (:url obj)
-                    resource (-> obj
-                                 :body
-                                 (StringReader.)
-                                 html/html-resource)
-
-                    ;; extract the articles
-                    articles (html/select resource
-                                          [:article :header :h2 :a])
-
-                    ;; the pagination links
-                    pagination (html/select resource
-                                            [:ul.pagination :a])
-
-                    a-tags (concat articles pagination)
-
-                    ;; resolve the URLs and stay within the same domain
-                    links (filter
-                           #(= (uri/host %)
-                               "blog.shriphani.com")
-                           (map
-                            #(->> %
-                                  :attrs
-                                  :href
-                                  (uri/resolve-uri (:url obj)))
-                            a-tags))]
-
-                ;; add extracted links to the supplied object
-                (merge obj
-                       {:extracted links}))))
+             (-> obj :url uri/host))
+      
+      (let [url (:url obj)
+            resource (try (-> obj
+                              :body
+                              xml->doc)
+                          (catch Exception e nil))
+            
+            ;; extract the articles
+            articles (map
+                      :text
+                      (try ($x "//item/link" resource)
+                           (catch Exception e nil)))]
+        
+        ;; add extracted links to the supplied object
+        (merge obj
+               {:extracted articles}))))
 
   (clean
     [this config]
