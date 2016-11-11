@@ -186,7 +186,8 @@
 
 (defn add-state-portions
   [config]
-  (merge config
+  (merge-with #(atom (merge @%1 @%2))
+         config
          {:state (atom {})}))
 
 (deftype DefaultStatePipelineComponent []
