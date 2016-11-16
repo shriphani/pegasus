@@ -28,8 +28,8 @@
                         vec
                         (partition 2 options)))
 
-          merged-options-map (merge options-map
-                                    default-extractor-options)
+          merged-options-map (merge default-extractor-options
+                                    options-map)
 
           enlive-sel  (:at-selector merged-options-map)
           
@@ -44,10 +44,12 @@
                         enlive-sel))
 
           attrs
-          (map
-           (fn [a-tag]
-             (get (:attrs a-tag) follow-sel))
-           tags)
+          (filter
+           identity
+           (map
+            (fn [a-tag]
+              (get (:attrs a-tag) follow-sel))
+            tags))
 
           all-extracted
           (filter
