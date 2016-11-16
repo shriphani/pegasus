@@ -57,9 +57,8 @@ URLs are extracted using `enlive` selectors.
           :job-dir "/tmp/sp-blog-corpus"}))
 ```
 
-This one uses XPath queries courtesy of `clj-xpath`.
-
-Using XPaths:
+Say you want more control and want to avoid the DSL, you can use the underlying
+machinery directly. Here's an example using XPaths to extract links.
 
 ```clojure
 (ns your.namespace
