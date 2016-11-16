@@ -18,17 +18,17 @@
   (crawl {:seeds ["http://blog.shriphani.com"]
           :user-agent "Pegasus web crawler"
           :extractor (defextractors
-                       (extract :at-selector
-                                [:article :header :h2 :a]
+                       (extract :at-selector [:article :header :h2 :a]
 
-                                :with-regex
-                                #"blog.shriphani.com")
+                                :follow :href
+
+                                :with-regex #"blog.shriphani.com")
                        
-                       (extract :at-selector
-                                [:ul.pagination :a]
+                       (extract :at-selector [:ul.pagination :a]
 
-                                :with-regex
-                                #"blog.shriphani.com"))
+                                :follow :href
+                                
+                                :with-regex #"blog.shriphani.com"))
           
           :corpus-size 20 ;; crawl 20 documents
           :job-dir "/tmp/sp-blog-corpus"})) ;; store all crawl data in /tmp/sp-blog-corpus/
