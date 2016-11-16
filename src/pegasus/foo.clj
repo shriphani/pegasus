@@ -1,9 +1,6 @@
 (ns pegasus.foo
-  (:require [org.bovinegenius.exploding-fish :as uri]
-            [net.cgrand.enlive-html :as html]
-            [pegasus.core :refer [crawl]]
-            [pegasus.dsl :refer :all]
-            [pegasus.process :as process])
+  (:require [pegasus.core :refer [crawl]]
+            [pegasus.dsl :refer :all])
   (:import (java.io StringReader)))
 
 (defn crawl-sp-blog
