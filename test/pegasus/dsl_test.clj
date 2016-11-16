@@ -12,7 +12,8 @@
             [pegasus.dsl :refer :all]
             [pegasus.utils :as utils]
             [taoensso.timbre :as timbre
-             :refer (info)]))
+             :refer (info)]
+            [org.bovinegenius.exploding-fish :as uri]))
 
 (use-fixtures :each job-dir-create-delete-fixture)
 
@@ -32,7 +33,12 @@
                                  :extractor
                                  (defextractors
                                    (extract :at-selector [:a]
-                                            :follow :href))})]
+                                            :follow :href
+                                            :when (fn [obj]
+                                                    (-> obj
+                                                        :url
+                                                        uri/host
+                                                        (= "foo.com")))))})]
         (loop []
           
           (let [stop (:stop?

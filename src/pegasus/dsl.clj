@@ -5,6 +5,9 @@
             [pegasus.process :as process])
   (:import [java.io StringReader]))
 
+(def default-extractor-options
+  {:when identity})
+
 (defn extract
   "Constructs extractors."
   [& options]
@@ -22,9 +25,14 @@
                         vec
                         (partition 2 options)))
 
-          enlive-sel  (:at-selector options-map)
+          merged-options-map (merge options-map
+                                    default-extractor-options)
+
+          enlive-sel  (:at-selector merged-options-map)
           
-          follow-sel  (:follow options-map)
+          follow-sel  (:follow merged-options-map)
+
+          predicate (:when merged-options-map)
           
           tags
           (filter
@@ -38,9 +46,11 @@
              (get (:attrs a-tag) follow-sel))
            tags)]
 
-      (map
-       #(uri/resolve-uri url %)
-       attrs))))
+      (if (predicate obj)
+        (map
+         #(uri/resolve-uri url %)
+         attrs)
+        []))))
 
 (defn defextractors
   [& extractors]
