@@ -54,3 +54,37 @@
                     (io/file
                      (:corpus-dir final-config)))))
               (recur))))))))
+
+(deftest test-dsl-regex
+  (testing "Test the output of the DSL"
+    (with-redefs [defaults/get-request (fn
+                                         ([& args]
+                                          (->> args
+                                               first
+                                               (get mock-bodies))))]
+      (let [final-config (crawl {:seeds ["http://foo.com/1"]
+                                 :impolite? true
+                                 :user-agent "Hello!!!"
+                                 :job-dir *current-dir*
+                                 :corpus-size 5
+                                 :min-delay-ms 0
+                                 :extractor
+                                 (defextractors
+                                   (extract :at-selector [:a]
+                                            :follow :href
+                                            :with-regex #"foo.com"))})]
+        (loop []
+          
+          (let [stop (:stop?
+                      @(:state final-config))]
+
+            (if stop
+              (do (is
+                   (= (:num-visited
+                       @(:state final-config))
+                      5))
+                  (is
+                   (all-unique?
+                    (io/file
+                     (:corpus-dir final-config)))))
+              (recur))))))))

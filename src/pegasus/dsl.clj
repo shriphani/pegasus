@@ -6,7 +6,10 @@
   (:import [java.io StringReader]))
 
 (def default-extractor-options
-  {:when identity})
+  {:when identity
+   :at-selector [:a]
+   :follow :href
+   :with-regex nil})
 
 (defn extract
   "Constructs extractors."
@@ -44,13 +47,25 @@
           (map
            (fn [a-tag]
              (get (:attrs a-tag) follow-sel))
-           tags)]
+           tags)
 
-      (if (predicate obj)
-        (map
-         #(uri/resolve-uri url %)
-         attrs)
-        []))))
+          all-extracted
+          (filter
+           identity
+           (if (predicate obj)
+             (map
+              #(uri/resolve-uri url %)
+              attrs)
+             []))
+
+          regex-filtered
+          (if (:with-regex merged-options-map)
+            (filter
+             #(re-find (:with-regex merged-options-map)
+                       %)
+             all-extracted)
+            all-extracted)]
+      regex-filtered)))
 
 (defn defextractors
   [& extractors]
@@ -61,14 +76,15 @@
     
     (run
       [this obj config]
-      (let [extracted (filter
-                       identity
-                       (flatten
-                        (map
-                         (fn [e]
-                           (e obj))
-                         extractors)))]
-        (println extracted)
+      (let [extracted (distinct
+                       (filter
+                        identity
+                        (flatten
+                         (map
+                          (fn [e]
+                            (e obj))
+                          extractors))))]
+        
         (merge
          obj
          {:extracted extracted})))
