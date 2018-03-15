@@ -16,7 +16,7 @@
                  [me.raynes/fs "1.4.6"]
                  [org.bovinegenius/exploding-fish "0.3.4"]
                  [org.clojure/clojure "1.8.0"]
-                 [org.clojure/core.async "0.2.374"]
+                 [org.clojure/core.async "0.4.474"]
                  [org.clojure/tools.namespace "0.2.11"]
                  [prismatic/schema "1.1.0"]
                  [slingshot "0.12.2"]]
