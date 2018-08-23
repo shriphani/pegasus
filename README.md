@@ -114,7 +114,7 @@ machinery directly. Here's an example using XPaths to extract links.
 
 ## License
 
-Copyright © 2015-2016 Shriphani Palakodety
+Copyright © 2015-2018 Shriphani Palakodety
 
 Distributed under the Eclipse Public License either version 1.0 or (at
 your option) any later version.

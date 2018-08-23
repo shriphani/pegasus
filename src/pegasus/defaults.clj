@@ -112,10 +112,16 @@
                        :corpus-dir
                        (io/file "corpus.clj.gz"))
           wrtr (-> file-obj
-                   io/output-stream
+                   (io/output-stream :append true :encoding "UTF-8")
                    (GZIPOutputStream.)
-                   (OutputStreamWriter. "UTF-8")
-                   agent)]
+                   (clojure.java.io/writer)
+                   agent)
+          err-handler (fn [ag ex]
+                        (future (restart-agent ag (-> file-obj
+                                                      (io/output-stream :append true :encoding "UTF-8")
+                                                      (GZIPOutputStream.)
+                                                      (clojure.java.io/writer)))))]
+      (set-error-handler! wrtr err-handler)
       (merge config
              {:writer-agent wrtr})))
 
