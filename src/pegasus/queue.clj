@@ -18,6 +18,7 @@
                           (client/get url
                                       {:socket-timeout 1000
                                        :conn-timeout 1000
+				       :cookie-policy :standard
                                        :headers
                                        {"User-Agent"
                                         (:user-agent config)}}))
