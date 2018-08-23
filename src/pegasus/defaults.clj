@@ -37,6 +37,7 @@
    (client/get url {:socket-timeout socket-timeout
                     :conn-timeout conn-timeout
 		    :cookie-policy :standard
+		    :decode-cookies false
                     :headers {"User-Agent" user-agent}
                     :insecure? true})))
 
