@@ -9,7 +9,7 @@
                  [clj-time "0.14.4"]
                  [com.taoensso/timbre "4.10.0"]
                  [enlive "1.1.6"]
-                 [factual/clj-leveldb "0.1.2"]
+                 [factual/clj-leveldb "0.1.1"]
                  [fort-knox "0.4.0"]
                  [com.github.kyleburton/clj-xpath "1.4.11"]
                  [factual/durable-queue "0.1.5"]
